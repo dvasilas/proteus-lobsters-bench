@@ -35,7 +35,8 @@ type BenchmarkConfig struct {
 		MeasuredSystem string
 	}
 	Connection struct {
-		Endpoint        string
+		ProteusEndpoint string
+		DBEndpoint      string
 		Database        string
 		AccessKeyID     string
 		SecretAccessKey string

@@ -19,6 +19,12 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dvasilas/proteus v0.0.0-20200826151527-980ba966b264 h1:/aEewf26G6O4IbclNS5AR0V0RnvCLl+GXsRerHEr6/4=
 github.com/dvasilas/proteus v0.0.0-20200826151527-980ba966b264/go.mod h1:G9033B9cEWpXrNJtplbQuLdszjNxMxvbA4EY0e9qeXc=
+github.com/dvasilas/proteus v0.0.0-20200830175321-517fb2c21c7c h1:7fa5KYUc06v/jjuJulDjt2mXb0xrjUIZ/zE2o3bDbFY=
+github.com/dvasilas/proteus v0.0.0-20200831113636-c44af6441bed h1:5849H2YS+0enjxdsDHPM8evZma/hifHmJdqcD6JzBhw=
+github.com/dvasilas/proteus v0.0.0-20200831115432-b6ce00e9ee1e h1:Y6Cyr+wpbUr0PeiL4qyfAaG8vzy7Q3fN29PrBuQIBGM=
+github.com/dvasilas/proteus v0.0.0-20200831115432-b6ce00e9ee1e/go.mod h1:+CHqnX05B2X2Ulyy41cGHfE8nGi4IeLTt1SUyike1PY=
+github.com/dvasilas/proteus v0.0.0-20200831142219-c6c6bd23a72a h1:Z0PVR3CICwdke3U4hwXE0cIi8xshJySqPWVNX9i4l/Q=
+github.com/dvasilas/proteus-lobsters-bench v0.0.0-20200826202438-fe42c98252df/go.mod h1:UQaBTvxd9Co/E0eA3P8N8/pp29gxDmhHONzghfIhGNc=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/distributions"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/operations"
-	"github.com/dvasilas/proteus/pkg/libbench/distributions"
-	"github.com/dvasilas/proteus/pkg/perf"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/perf"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -81,12 +81,12 @@ func (w Workload) Run(measurementBufferSize int64) (map[string][]time.Duration, 
 		if r < w.config.Operations.WriteRatio {
 			vote := rand.Float64()
 			if vote < w.config.Operations.DownVoteRatio {
-				respTime, err = w.DownVoteStory(0)
+				respTime, err = w.StoryVote(0, -1)
 				if err != nil {
 					log.Fatal(err)
 				}
 			} else {
-				respTime, err = w.UpVoteStory(0)
+				respTime, err = w.StoryVote(0, 1)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -96,7 +96,7 @@ func (w Workload) Run(measurementBufferSize int64) (map[string][]time.Duration, 
 				perOpCnt["vote"]++
 			}
 		} else {
-			respTime, err = w.GetHomepage()
+			respTime, err = w.Frontpage()
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -108,6 +108,11 @@ func (w Workload) Run(measurementBufferSize int64) (map[string][]time.Duration, 
 		opCnt++
 	}
 	return durations, perOpCnt, st, time.Now()
+}
+
+// Test ...
+func (w Workload) Test() error {
+	return w.ops.Test()
 }
 
 // Preload ...
@@ -125,10 +130,10 @@ func (w Workload) Preload() error {
 	fmt.Printf("Created %d users\n", w.config.Preload.RecordCount.Users)
 
 	for i := 1; i <= w.config.Preload.RecordCount.Stories; i++ {
-		if err := w.AddStory(); err != nil {
+		if err := w.Submit(); err != nil {
 			return err
 		}
-		if _, err := w.UpVoteStory(i); err != nil {
+		if _, err := w.StoryVote(i, 1); err != nil {
 			return err
 		}
 	}
@@ -136,10 +141,10 @@ func (w Workload) Preload() error {
 	fmt.Printf("Created %d stories\n", w.config.Preload.RecordCount.Stories)
 
 	for i := 1; i <= w.config.Preload.RecordCount.Comments; i++ {
-		if err := w.AddComment(); err != nil {
+		if err := w.Comment(); err != nil {
 			return err
 		}
-		if _, err := w.UpVoteComment(i); err != nil {
+		if _, err := w.CommentVote(i, 1); err != nil {
 			return err
 		}
 	}
@@ -156,11 +161,11 @@ func (w Workload) Preload() error {
 			for i := 1; i <= voteCount; i++ {
 				vote := rand.Float64()
 				if vote < w.config.Operations.DownVoteRatio {
-					if _, err := w.DownVoteStory(0); err != nil {
+					if _, err := w.StoryVote(0, -1); err != nil {
 						panic(err)
 					}
 				} else {
-					if _, err := w.UpVoteStory(0); err != nil {
+					if _, err := w.StoryVote(0, 1); err != nil {
 						panic(err)
 					}
 				}
@@ -178,11 +183,11 @@ func (w Workload) Preload() error {
 	return nil
 }
 
-// GetHomepage ...
-func (w *Workload) GetHomepage() (time.Duration, error) {
+// Frontpage ...
+func (w *Workload) Frontpage() (time.Duration, error) {
 	st := time.Now()
 
-	_, err := w.ops.GetHomepage()
+	_, err := w.ops.Frontpage()
 
 	return time.Since(st), err
 }
@@ -192,8 +197,8 @@ func (w *Workload) AddUser() error {
 	return w.ops.AddUser()
 }
 
-// AddStory ...
-func (w *Workload) AddStory() error {
+// Submit ...
+func (w *Workload) Submit() error {
 	w.ops.State.UserMutex.RLock()
 	userRecords := w.ops.State.UserRecords
 	w.ops.State.UserMutex.RUnlock()
@@ -202,11 +207,11 @@ func (w *Workload) AddStory() error {
 		return err
 	}
 
-	return w.ops.AddStory(userID)
+	return w.ops.Submit(userID)
 }
 
-// AddComment ...
-func (w *Workload) AddComment() error {
+// Comment ...
+func (w *Workload) Comment() error {
 	w.ops.State.UserMutex.RLock()
 	userRecords := w.ops.State.UserRecords
 	storyRecords := w.ops.State.StoryRecords
@@ -221,12 +226,12 @@ func (w *Workload) AddComment() error {
 		return err
 	}
 
-	return w.ops.AddComment(userID, storyID)
+	return w.ops.Comment(userID, storyID)
 
 }
 
-// UpVoteStory ...
-func (w *Workload) UpVoteStory(storyID int) (time.Duration, error) {
+// StoryVote ...
+func (w *Workload) StoryVote(storyID, vote int) (time.Duration, error) {
 	w.ops.State.UserMutex.RLock()
 	userRecords := w.ops.State.UserRecords
 	storyRecords := w.ops.State.StoryRecords
@@ -256,49 +261,13 @@ func (w *Workload) UpVoteStory(storyID int) (time.Duration, error) {
 	}
 
 	st := time.Now()
-	err = w.ops.UpVoteStory(userID, storyID)
+	err = w.ops.StoryVote(userID, storyID, vote)
 
 	return time.Since(st), err
 }
 
-// DownVoteStory ...
-func (w *Workload) DownVoteStory(storyID int) (time.Duration, error) {
-	w.ops.State.UserMutex.RLock()
-	userRecords := w.ops.State.UserRecords
-	storyRecords := w.ops.State.StoryRecords
-	w.ops.State.UserMutex.RUnlock()
-
-	userID, err := distributions.SelectUser(userRecords)
-	if err != nil {
-		return -1, err
-	}
-
-	if storyID == 0 {
-		window := 5
-		storyID, err = distributions.SelectStory(storyRecords)
-		if err != nil {
-			return -1, err
-		}
-		for !w.storySemPhs[storyID].TryAcquire(1) {
-			storyID, err = distributions.SelectStory(storyRecords)
-			if err != nil {
-				return -1, err
-			}
-			window *= 2
-			waitFor := time.Duration(rand.Intn(window))
-			time.Sleep(waitFor * time.Millisecond)
-		}
-		defer w.storySemPhs[storyID].Release(1)
-	}
-
-	st := time.Now()
-	err = w.ops.DownVoteStory(userID, storyID)
-
-	return time.Since(st), err
-}
-
-// UpVoteComment ...
-func (w *Workload) UpVoteComment(commentID int) (time.Duration, error) {
+// CommentVote ...
+func (w *Workload) CommentVote(commentID, vote int) (time.Duration, error) {
 	w.ops.State.UserMutex.RLock()
 	userRecords := w.ops.State.UserRecords
 	commentRecords := w.ops.State.CommentRecords
@@ -317,32 +286,7 @@ func (w *Workload) UpVoteComment(commentID int) (time.Duration, error) {
 	}
 
 	st := time.Now()
-	err = w.ops.UpVoteComment(userID, commentID)
-
-	return time.Since(st), err
-}
-
-// DownVoteComment ...
-func (w *Workload) DownVoteComment(commentID int) (time.Duration, error) {
-	w.ops.State.UserMutex.RLock()
-	userRecords := w.ops.State.UserRecords
-	commentRecords := w.ops.State.CommentRecords
-	w.ops.State.UserMutex.RUnlock()
-
-	userID, err := distributions.SelectUser(userRecords)
-	if err != nil {
-		return -1, err
-	}
-
-	if commentID == 0 {
-		commentID, err = distributions.SelectComment(commentRecords)
-		if err != nil {
-			return -1, err
-		}
-	}
-
-	st := time.Now()
-	err = w.ops.DownVoteComment(userID, commentID)
+	err = w.ops.CommentVote(userID, commentID, vote)
 
 	return time.Since(st), err
 }

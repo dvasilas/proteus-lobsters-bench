@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/datastore"
@@ -13,7 +15,7 @@ import (
 
 // QueryEngine ...
 type QueryEngine interface {
-	Query(limit int) (interface{}, error)
+	Query(query string) (interface{}, error)
 	Close()
 }
 
@@ -26,28 +28,30 @@ type ProteusQueryEngine struct {
 // --------------------- Proteus --------------------
 
 // NewProteusQueryEngine ...
-func NewProteusQueryEngine(tracing bool) (ProteusQueryEngine, error) {
-	address := "127.0.0.1:50350"
+func NewProteusQueryEngine(endpoint string, tracing bool) (ProteusQueryEngine, error) {
 	for {
-		c, err := net.DialTimeout("tcp", address, time.Duration(time.Second))
+		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
 		if err != nil {
 			time.Sleep(2 * time.Second)
-			fmt.Println("retying connecting to: ", address)
+			fmt.Println("retying connecting to: ", endpoint)
 		} else {
 			c.Close()
 			break
 		}
 	}
 
-	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: 50350}, tracing)
+	port, err := strconv.ParseInt(strings.Split(endpoint, ":")[1], 10, 64)
+	if err != nil {
+		return ProteusQueryEngine{}, err
+	}
+	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: int(port)}, tracing)
 	if err != nil {
 		return ProteusQueryEngine{}, err
 	}
 
 	err = errors.New("not tried yet")
 	for err != nil {
-		// _, err = c.QueryInternal("stateTableJoin", nil, nil, int64(1), nil, false)
-		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM qpu ORDER BY vote_sum DESC LIMIT 5")
+		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 5")
 		time.Sleep(2 * time.Second)
 		fmt.Println("retying a test query", err)
 	}
@@ -59,18 +63,11 @@ func NewProteusQueryEngine(tracing bool) (ProteusQueryEngine, error) {
 }
 
 // Query ...
-func (qe ProteusQueryEngine) Query(limit int) (resp interface{}, err error) {
-	// resp, err := qe.proteusClient.QueryInternal("stateTableJoin", nil, nil, int64(limit), nil, false)
-
-	// resp, err := qe.proteusClient.QueryNoOp()
-
-	resp, err = qe.proteusClient.Query("SELECT title, description, short_id, user_id, vote_sum FROM qpu ORDER BY vote_sum DESC LIMIT 5")
-
-	// resp, err := qe.proteusClient.QueryArgs()
+func (qe ProteusQueryEngine) Query(query string) (resp interface{}, err error) {
+	resp, err = qe.proteusClient.Query(query)
 	if err != nil {
 		return nil, err
 	}
-
 	return resp, nil
 }
 
@@ -94,15 +91,16 @@ func NewMySQLWithViewsQE(ds *datastore.Datastore) MySQLWithViewsQE {
 }
 
 // Query ...
-func (qe MySQLWithViewsQE) Query(limit int) (interface{}, error) {
+func (qe MySQLWithViewsQE) Query(query string) (interface{}, error) {
 	projection := []string{"title", "description", "short_id", "vote_count"}
 
-	query := fmt.Sprintf("SELECT title, description, short_id, vote_count "+
+	limit := -1
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, vote_count "+
 		"FROM stories "+
 		"ORDER BY vote_count DESC "+
 		"LIMIT %d",
 		limit)
-	rows, err := qe.ds.Db.Query(query)
+	rows, err := qe.ds.Db.Query(queryStr)
 	if err != nil {
 		return nil, err
 	}
@@ -151,10 +149,11 @@ func NewMySQLPlainQE(ds *datastore.Datastore) MySQLPlainQE {
 }
 
 // Query ...
-func (qe MySQLPlainQE) Query(limit int) (interface{}, error) {
+func (qe MySQLPlainQE) Query(query string) (interface{}, error) {
 	projection := []string{"story_id", "title", "description", "short_id", "vote_count"}
 
-	query := fmt.Sprintf("SELECT story_id, s.title, s.description, s.short_id, vote_count "+
+	limit := -1
+	queryStr := fmt.Sprintf("SELECT story_id, s.title, s.description, s.short_id, vote_count "+
 		"FROM stories s "+
 		"JOIN ( "+
 		"SELECT v.story_id, SUM(v.vote) as vote_count "+
@@ -166,7 +165,7 @@ func (qe MySQLPlainQE) Query(limit int) (interface{}, error) {
 		"LIMIT %d",
 		limit)
 
-	rows, err := qe.ds.Db.Query(query)
+	rows, err := qe.ds.Db.Query(queryStr)
 	if err != nil {
 		return nil, err
 	}

@@ -34,12 +34,6 @@ fmt: ; $(info $(M) running gofmt…)
 test: fmt ; $(info $(M) running $(NAME:%=% )tests…)
 	@go test $(TESTPKGS)
 
-.PHONY: proto
-## proto: Compiles the protobuf files
-proto: $(PROTOC_CMD)
-	# go get ./vendor/github.com/golang/protobuf/protoc-gen-go
-	protoc pkg/proteus-go-client/api/qpu_api.proto --go_out=plugins=grpc:${GOPATH}/src/
-
 .PHONY: help
 ## help: Prints this help message
 help:

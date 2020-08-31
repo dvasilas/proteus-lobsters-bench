@@ -20,6 +20,7 @@ func main() {
 	flag.IntVar(&threads, "t", 0, "number of client threads to be used")
 	preload := flag.Bool("p", false, "preload")
 	dryRun := flag.Bool("d", false, "dryRun: print configuration and exit")
+	test := flag.Bool("test", false, "test: do 1 operation for each op type")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stdout, "usage: -c config_file -s system [-p]")
@@ -46,6 +47,14 @@ func main() {
 	bench, err := benchmark.NewBenchmark(configFile, *preload, threads, *dryRun)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if *test {
+		if err := bench.Test(); err != nil {
+			log.Fatal(err)
+		}
+
+		return
 	}
 
 	if *dryRun {

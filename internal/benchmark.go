@@ -76,6 +76,11 @@ func (b Benchmark) Run() error {
 	return nil
 }
 
+// Test ...
+func (b Benchmark) Test() error {
+	return b.workload.Test()
+}
+
 // PrintMeasurements ...
 func (b Benchmark) PrintMeasurements() {
 	b.config.Print()

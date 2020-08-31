@@ -1,7 +1,8 @@
 tracing = false
 
 [Connection]
-endpoint = "127.0.0.1:3307"
+proteusEndpoint = "127.0.0.1:50350"
+DBEndpoint = "127.0.0.1:3307"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
