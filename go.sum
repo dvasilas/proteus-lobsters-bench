@@ -24,6 +24,8 @@ github.com/dvasilas/proteus v0.0.0-20200831113636-c44af6441bed h1:5849H2YS+0enjx
 github.com/dvasilas/proteus v0.0.0-20200831115432-b6ce00e9ee1e h1:Y6Cyr+wpbUr0PeiL4qyfAaG8vzy7Q3fN29PrBuQIBGM=
 github.com/dvasilas/proteus v0.0.0-20200831115432-b6ce00e9ee1e/go.mod h1:+CHqnX05B2X2Ulyy41cGHfE8nGi4IeLTt1SUyike1PY=
 github.com/dvasilas/proteus v0.0.0-20200831142219-c6c6bd23a72a h1:Z0PVR3CICwdke3U4hwXE0cIi8xshJySqPWVNX9i4l/Q=
+github.com/dvasilas/proteus v0.0.0-20200831230048-0ab1e839bc5f h1:IGGgWU39OvLRyI+N7lc+bIYJDiL+KN1lnePWbpeZdXM=
+github.com/dvasilas/proteus v0.0.0-20200831230048-0ab1e839bc5f/go.mod h1:1KXazmdxM2evCoO+kX8lHEBCuV122IG4pSK7bHEoFNo=
 github.com/dvasilas/proteus-lobsters-bench v0.0.0-20200826202438-fe42c98252df/go.mod h1:UQaBTvxd9Co/E0eA3P8N8/pp29gxDmhHONzghfIhGNc=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
