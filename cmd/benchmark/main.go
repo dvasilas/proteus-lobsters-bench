@@ -7,14 +7,18 @@ import (
 	"text/tabwriter"
 
 	benchmark "github.com/dvasilas/proteus-lobsters-bench/internal"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/workload"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	var configFile string
 	var threads int
+	var load, maxInFlight int64
 	flag.StringVar(&configFile, "c", "noArg", "configuration file")
 	flag.IntVar(&threads, "t", 0, "number of client threads to be used")
+	flag.Int64Var(&load, "l", 0, "target load to be offered")
+	flag.Int64Var(&maxInFlight, "f", 0, "max operation in flight")
 	preload := flag.Bool("p", false, "preload")
 	dryRun := flag.Bool("d", false, "dryRun: print configuration and exit")
 	test := flag.Bool("test", false, "test: do 1 operation for each op type")
@@ -42,7 +46,7 @@ func main() {
 		return
 	}
 
-	bench, err := benchmark.NewBenchmark(configFile, *preload, threads, *dryRun)
+	bench, err := benchmark.NewBenchmark(configFile, *preload, threads, load, maxInFlight, *dryRun)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,16 +71,12 @@ func main() {
 		return
 	}
 
+	workloadType := workload.Simple
 	if *macro {
-		err = bench.RunMacro()
-		if err != nil {
-			log.Fatal(err)
-		}
-		bench.PrintMeasurements()
-		return
+		workloadType = workload.Complete
 	}
 
-	err = bench.RunMicro()
+	err = bench.Run(workloadType)
 	if err != nil {
 		log.Fatal(err)
 	}

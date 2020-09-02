@@ -6,6 +6,8 @@ DBEndpoint = "127.0.0.1:3307"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
+poolSize = 256
+poolOverflow = 256
 
 [Benchmark]
 opCount = 1000000
@@ -14,6 +16,8 @@ doWarmup = true
 warmup = 30
 threadCount = 1
 measuredsystem = "proteus"
+targetLoad = 30
+maxInFlight = 16
 
 [Operations]
 writeRatio = 0.0

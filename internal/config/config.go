@@ -32,6 +32,8 @@ type BenchmarkConfig struct {
 		ThreadCount    int
 		OpCount        int64
 		MeasuredSystem string
+		TargetLoad     int64
+		MaxInFlight    int64
 	}
 	Connection struct {
 		ProteusEndpoint string
@@ -39,6 +41,8 @@ type BenchmarkConfig struct {
 		Database        string
 		AccessKeyID     string
 		SecretAccessKey string
+		PoolSize 	int
+		PoolOverflow	int
 	}
 }
 
@@ -64,6 +68,9 @@ func (c *BenchmarkConfig) Print() {
 	fmt.Printf("Benchmark duration(s): %d\n", c.Benchmark.Runtime)
 	fmt.Printf("Warmup(s): %d\n", c.Benchmark.Warmup)
 	fmt.Printf("Benchmark threads: %d\n", c.Benchmark.ThreadCount)
+	fmt.Printf("Target load: %d\n", c.Benchmark.TargetLoad*int64(c.Benchmark.ThreadCount))
+	fmt.Printf("Max in flight: %d\n", c.Benchmark.MaxInFlight)
+	fmt.Printf("Conn pool size: %d\n", c.Connection.PoolSize + c.Connection.PoolOverflow)
 	fmt.Printf("[workload] Q/W ratio(%%): %f\n", 1-c.Operations.WriteRatio)
 	fmt.Printf("[workload] U/D vote ratio(%%): %f\n", 1-c.Operations.DownVoteRatio)
 	fmt.Printf("[preload] Users: %d\n", c.Preload.RecordCount.Users)

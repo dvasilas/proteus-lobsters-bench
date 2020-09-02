@@ -17,10 +17,9 @@ func (d durations) percentile(p float64) time.Duration {
 }
 
 type threadRawMeasurements struct {
-	start   time.Time
-	end     time.Time
-	buf     map[string][]time.Duration
-	opCount map[string]int64
+	buf        map[string][]time.Duration
+	runtime    time.Duration
+	opsOffered int64
 }
 
 // Perf ...
@@ -31,18 +30,19 @@ type Perf struct {
 
 // OpMetrics ...
 type OpMetrics struct {
-	OpCount        int64
-	Throughput     float64
-	ThroughputNorm float64
-	P50            float64
-	P90            float64
-	P95            float64
-	P99            float64
+	OpCount    int64
+	Throughput float64
+	P50        float64
+	P90        float64
+	P95        float64
+	P99        float64
 }
 
 // Metrics ...
 type Metrics struct {
-	Runtime      float64
+	Runtime      time.Duration
+	LoadOffered  float64
+	Throughput   float64
 	PerOpMetrics map[string]OpMetrics
 }
 
@@ -54,49 +54,33 @@ func New() *Perf {
 }
 
 //ReportMeasurements ...
-func (p *Perf) ReportMeasurements(m map[string][]time.Duration, opCount map[string]int64, st, en time.Time) {
+func (p *Perf) ReportMeasurements(runtime time.Duration, opsOffered int64, m map[string][]time.Duration) {
 	p.Lock()
 	p.measurementsBuf = append(p.measurementsBuf, threadRawMeasurements{
-		start:   st,
-		end:     en,
-		buf:     m,
-		opCount: opCount,
+		buf:        m,
+		runtime:    runtime,
+		opsOffered: opsOffered,
 	})
 	p.Unlock()
 }
 
 // CalculateMetrics ...
 func (p *Perf) CalculateMetrics() Metrics {
+	var totalOpsOffered int64
+	var totalRuntime time.Duration
 	aggregateMeasurements := make(map[string]durations)
-	aggregateOpCount := make(map[string]int64)
 
-	var aggregateRuntime time.Duration
-	var experimentSt, experimentEn time.Time
+	for _, threadReport := range p.measurementsBuf {
+		totalRuntime += threadReport.runtime
+		totalOpsOffered += threadReport.opsOffered
 
-	for threadID, threadReport := range p.measurementsBuf {
-		if threadID == 0 {
-			experimentSt = threadReport.start
-			experimentEn = threadReport.end
-		}
-		if threadReport.start.Before(experimentSt) {
-			experimentSt = threadReport.start
-		}
-		if threadReport.end.After(experimentEn) {
-			experimentEn = threadReport.end
-		}
-
-		aggregateRuntime += threadReport.end.Sub(threadReport.start)
-
-		for measurementType, rawMeasurements := range p.measurementsBuf[threadID].buf {
+		for measurementType, rawMeasurements := range threadReport.buf {
 			aggregateMeasurements[measurementType] = append(
 				aggregateMeasurements[measurementType],
-				rawMeasurements[:threadReport.opCount[measurementType]]...,
+				rawMeasurements...,
 			)
-			aggregateOpCount[measurementType] += threadReport.opCount[measurementType]
 		}
 	}
-
-	runTime := experimentEn.Sub(experimentSt)
 
 	for _, threadMeasurements := range aggregateMeasurements {
 		sort.Sort(threadMeasurements)
@@ -106,13 +90,16 @@ func (p *Perf) CalculateMetrics() Metrics {
 		PerOpMetrics: make(map[string]OpMetrics),
 	}
 
-	m.Runtime = runTime.Seconds()
+	m.Runtime = totalRuntime / time.Duration(len(p.measurementsBuf))
+	m.LoadOffered = float64(totalOpsOffered) / totalRuntime.Seconds() * float64(len(p.measurementsBuf))
 
+	totalOpCnt := 0
 	for opType, threadMeasurements := range aggregateMeasurements {
-		if aggregateOpCount[opType] > 0 {
+		totalOpCnt += len(threadMeasurements)
+		if len(threadMeasurements) > 0 {
 			opMetrics := OpMetrics{
-				OpCount:    aggregateOpCount[opType],
-				Throughput: (float64(aggregateOpCount[opType]) / aggregateRuntime.Seconds()) * float64(len(p.measurementsBuf)),
+				OpCount:    int64(len(threadMeasurements)),
+				Throughput: float64(len(threadMeasurements)) / totalRuntime.Seconds() * float64(len(p.measurementsBuf)),
 				P50:        durationToMillis(threadMeasurements[threadMeasurements.Len()/2]),
 				P90:        durationToMillis(threadMeasurements.percentile(0.9)),
 				P95:        durationToMillis(threadMeasurements.percentile(0.95)),
@@ -121,6 +108,8 @@ func (p *Perf) CalculateMetrics() Metrics {
 			m.PerOpMetrics[opType] = opMetrics
 		}
 	}
+
+	m.Throughput = float64(totalOpCnt) / totalRuntime.Seconds() * float64(len(p.measurementsBuf))
 
 	return m
 }

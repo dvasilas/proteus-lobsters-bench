@@ -8,12 +8,14 @@ accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
 
 [Benchmark]
-opCount = 1
+opCount = 100000
 runtime = 20
-doWarmup = false
+doWarmup = true
 warmup = 10
 threadCount = 1
 measuredSystem = "proteus"
+targetLoad = 30
+maxInFlight = 32
 
 [Operations]
 writeRatio = 0.0

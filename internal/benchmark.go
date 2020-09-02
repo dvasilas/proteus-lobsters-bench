@@ -20,7 +20,7 @@ type Benchmark struct {
 }
 
 // NewBenchmark ...
-func NewBenchmark(configFile string, preload bool, threadCnt int, dryRun bool) (Benchmark, error) {
+func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFlight int64, dryRun bool) (Benchmark, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	conf, err := config.GetConfig(configFile)
@@ -30,6 +30,14 @@ func NewBenchmark(configFile string, preload bool, threadCnt int, dryRun bool) (
 	conf.Benchmark.DoPreload = preload
 	if threadCnt > 0 {
 		conf.Benchmark.ThreadCount = threadCnt
+	}
+
+	if load > 0 {
+		conf.Benchmark.TargetLoad = load / int64(threadCnt)
+	}
+
+	if maxInFlight > 0 {
+		conf.Benchmark.MaxInFlight = maxInFlight
 	}
 
 	log.WithFields(log.Fields{"conf": conf}).Info("configuration")
@@ -56,30 +64,24 @@ func (b Benchmark) Preload() error {
 	return b.workload.Preload()
 }
 
-// RunMicro ...
-func (b Benchmark) RunMicro() error {
+// Run ...
+func (b Benchmark) Run(workloadType workload.Type) error {
 	var wg sync.WaitGroup
 
 	for i := 0; i < b.config.Benchmark.ThreadCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			measurements, measurementBufferSize, startTime, endTime := b.workload.RunMicro(b.config.Benchmark.OpCount)
-			b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
+			// measurements, measurementBufferSize, startTime, endTime := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
+			// b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
+			runtime, opsOffered, durations := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
+			b.measurements.ReportMeasurements(runtime, opsOffered, durations)
 		}()
 	}
 
 	wg.Wait()
 
 	b.workload.Close()
-
-	return nil
-}
-
-// RunMacro ...
-func (b Benchmark) RunMacro() error {
-	measurements, measurementBufferSize, startTime, endTime := b.workload.RunMacro(b.config.Benchmark.OpCount)
-	b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
 
 	return nil
 }
@@ -95,7 +97,9 @@ func (b Benchmark) PrintMeasurements() {
 
 	metrics := b.measurements.CalculateMetrics()
 
-	fmt.Printf("Runtime(s): %.3f\n", metrics.Runtime)
+	fmt.Printf("Runtime(s): %.3f\n", metrics.Runtime.Seconds())
+	fmt.Printf("Load offered: %.3f\n", metrics.LoadOffered)
+	fmt.Printf("Total throughput: %.5f\n", metrics.Throughput)
 	for opType, metrics := range metrics.PerOpMetrics {
 		fmt.Printf("[%s] Operation count: %d\n", opType, metrics.OpCount)
 		fmt.Printf("[%s] Throughput: %.5f\n", opType, metrics.Throughput)

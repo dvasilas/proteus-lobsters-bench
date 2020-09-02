@@ -28,7 +28,7 @@ type ProteusQueryEngine struct {
 // --------------------- Proteus --------------------
 
 // NewProteusQueryEngine ...
-func NewProteusQueryEngine(endpoint string, tracing bool) (ProteusQueryEngine, error) {
+func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing bool) (ProteusQueryEngine, error) {
 	for {
 		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
 		if err != nil {
@@ -44,7 +44,7 @@ func NewProteusQueryEngine(endpoint string, tracing bool) (ProteusQueryEngine, e
 	if err != nil {
 		return ProteusQueryEngine{}, err
 	}
-	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: int(port)}, tracing)
+	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: int(port)}, poolSize, poolOverflow, tracing)
 	if err != nil {
 		return ProteusQueryEngine{}, err
 	}
