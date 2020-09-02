@@ -12,10 +12,9 @@ type BenchmarkConfig struct {
 	Tracing bool
 	Preload struct {
 		RecordCount struct {
-			Users      int
-			Stories    int
-			Comments   int
-			StoryVotes int
+			Users    int64
+			Stories  int64
+			Comments int64
 		}
 	}
 	Operations struct {
@@ -70,5 +69,4 @@ func (c *BenchmarkConfig) Print() {
 	fmt.Printf("[preload] Users: %d\n", c.Preload.RecordCount.Users)
 	fmt.Printf("[preload] Stories: %d\n", c.Preload.RecordCount.Stories)
 	fmt.Printf("[preload] Comments: %d\n", c.Preload.RecordCount.Comments)
-	fmt.Printf("[preload] Votes-stories: %d\n", c.Preload.RecordCount.StoryVotes)
 }

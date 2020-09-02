@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
@@ -17,19 +16,8 @@ import (
 // Operations ...
 type Operations struct {
 	config *config.BenchmarkConfig
-	State  *BenchmarkState
 	qe     queryengine.QueryEngine
 	ds     datastore.Datastore
-}
-
-// BenchmarkState ...
-type BenchmarkState struct {
-	UserRecords    int
-	StoryRecords   int
-	CommentRecords int
-	UserMutex      sync.RWMutex
-	StoryMutex     sync.RWMutex
-	CommentMutex   sync.RWMutex
 }
 
 // Homepage ...
@@ -70,18 +58,10 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		}
 	}
 
-	state := BenchmarkState{}
-	if !conf.Benchmark.DoPreload {
-		state.UserRecords = conf.Preload.RecordCount.Users
-		state.StoryRecords = conf.Preload.RecordCount.Stories
-		state.CommentRecords = conf.Preload.RecordCount.Comments
-	}
-
 	return &Operations{
 		config: conf,
 		qe:     qe,
 		ds:     ds,
-		State:  &state,
 	}, nil
 }
 
@@ -94,7 +74,6 @@ func (op *Operations) Frontpage() (Homepage, error) {
 	if err != nil {
 		return Homepage{}, err
 	}
-
 	hp := Homepage{}
 	switch op.config.Benchmark.MeasuredSystem {
 	case "proteus":
@@ -215,7 +194,7 @@ func (op *Operations) Story(shortID string) (Story, error) {
 }
 
 // StoryVote issues an up or down vote for the given story.
-func (op *Operations) StoryVote(userID, storyID, vote int) error {
+func (op *Operations) StoryVote(userID, storyID int64, vote int) error {
 	return op.ds.Insert(
 		"votes",
 		map[string]interface{}{
@@ -226,7 +205,7 @@ func (op *Operations) StoryVote(userID, storyID, vote int) error {
 }
 
 // CommentVote issues an up or down vote for the given comment.
-func (op *Operations) CommentVote(userID, commentID, vote int) error {
+func (op *Operations) CommentVote(userID, commentID int64, vote int) error {
 	storyID, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
 	if err != nil {
 		return err
@@ -243,16 +222,8 @@ func (op *Operations) CommentVote(userID, commentID, vote int) error {
 }
 
 // Submit a new story to the site.
-func (op *Operations) Submit(userID int) error {
-	title, err := randString(10)
-	if err != nil {
-		return err
-	}
+func (op *Operations) Submit(userID int64, shortID, title string) error {
 	description, err := randString(30)
-	if err != nil {
-		return err
-	}
-	shortID, err := randString(5)
 	if err != nil {
 		return err
 	}
@@ -263,19 +234,17 @@ func (op *Operations) Submit(userID int) error {
 			"user_id":     userID,
 			"title":       title,
 			"description": description,
-			"short_id":    shortID[0:4],
+			"short_id":    shortID,
 		},
 	); err != nil {
 		return err
 	}
 
-	op.State.addStory()
-
 	return nil
 }
 
 // Comment ...
-func (op *Operations) Comment(userID, storyID int) error {
+func (op *Operations) Comment(userID, storyID int64) error {
 	comment, err := randString(20)
 	if err != nil {
 		return err
@@ -291,8 +260,6 @@ func (op *Operations) Comment(userID, storyID int) error {
 	); err != nil {
 		return err
 	}
-
-	op.State.addComment()
 
 	return nil
 }
@@ -310,27 +277,7 @@ func (op *Operations) AddUser() error {
 		return err
 	}
 
-	op.State.addUser()
-
 	return nil
-}
-
-func (st *BenchmarkState) addUser() {
-	st.StoryMutex.Lock()
-	st.UserRecords++
-	st.StoryMutex.Unlock()
-}
-
-func (st *BenchmarkState) addStory() {
-	st.StoryMutex.Lock()
-	st.StoryRecords++
-	st.StoryMutex.Unlock()
-}
-
-func (st *BenchmarkState) addComment() {
-	st.StoryMutex.Lock()
-	st.CommentRecords++
-	st.StoryMutex.Unlock()
 }
 
 // Close ...
@@ -341,7 +288,7 @@ func (op *Operations) Close() {
 // Test ...
 func (op *Operations) Test() error {
 	fmt.Println("Submit Story ...")
-	if err := op.Submit(1); err != nil {
+	if err := op.Submit(1, "", ""); err != nil {
 		return err
 	}
 
@@ -363,7 +310,7 @@ func (op *Operations) Test() error {
 	}
 
 	fmt.Println("UpVote story ...")
-	if err := op.StoryVote(1, int(storyID), 1); err != nil {
+	if err := op.StoryVote(1, storyID, 1); err != nil {
 		return err
 	}
 	time.Sleep(2 * time.Second)

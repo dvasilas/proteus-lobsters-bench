@@ -51,7 +51,7 @@ func NewProteusQueryEngine(endpoint string, tracing bool) (ProteusQueryEngine, e
 
 	err = errors.New("not tried yet")
 	for err != nil {
-		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 5")
+		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
 		time.Sleep(2 * time.Second)
 		fmt.Println("retying a test query", err)
 	}

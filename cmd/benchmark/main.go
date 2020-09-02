@@ -11,9 +11,6 @@ import (
 )
 
 func main() {
-
-	// log.SetLevel(log.TraceLevel)
-
 	var configFile string
 	var threads int
 	flag.StringVar(&configFile, "c", "noArg", "configuration file")
@@ -21,6 +18,7 @@ func main() {
 	preload := flag.Bool("p", false, "preload")
 	dryRun := flag.Bool("d", false, "dryRun: print configuration and exit")
 	test := flag.Bool("test", false, "test: do 1 operation for each op type")
+	macro := flag.Bool("M", false, "run macro benchmark")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stdout, "usage: -c config_file -s system [-p]")
@@ -69,10 +67,18 @@ func main() {
 		return
 	}
 
-	err = bench.Run()
+	if *macro {
+		err = bench.RunMacro()
+		if err != nil {
+			log.Fatal(err)
+		}
+		bench.PrintMeasurements()
+		return
+	}
+
+	err = bench.RunMicro()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	bench.PrintMeasurements()
 }

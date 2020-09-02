@@ -56,15 +56,15 @@ func (b Benchmark) Preload() error {
 	return b.workload.Preload()
 }
 
-// Run ...
-func (b Benchmark) Run() error {
+// RunMicro ...
+func (b Benchmark) RunMicro() error {
 	var wg sync.WaitGroup
 
 	for i := 0; i < b.config.Benchmark.ThreadCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			measurements, measurementBufferSize, startTime, endTime := b.workload.Run(b.config.Benchmark.OpCount)
+			measurements, measurementBufferSize, startTime, endTime := b.workload.RunMicro(b.config.Benchmark.OpCount)
 			b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
 		}()
 	}
@@ -72,6 +72,14 @@ func (b Benchmark) Run() error {
 	wg.Wait()
 
 	b.workload.Close()
+
+	return nil
+}
+
+// RunMacro ...
+func (b Benchmark) RunMacro() error {
+	measurements, measurementBufferSize, startTime, endTime := b.workload.RunMacro(b.config.Benchmark.OpCount)
+	b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
 
 	return nil
 }
