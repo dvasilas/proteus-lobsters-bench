@@ -53,8 +53,14 @@ type measurement struct {
 	endTs    time.Time
 }
 
-func doOperationAsync(op Operation, measurementsCh chan measurement, pendingOperations *int64, limitCh chan struct{}) {
-	defer func() { <-limitCh }()
+func doOperationAsync(op Operation, measurementsCh chan measurement, pendingOperations *int64, limitReadCh, limitWriteCh chan struct{}) {
+	switch op.(type) {
+	case Frontpage, Story:
+		defer func() { <-limitReadCh }()
+	case StoryVote, CommentVote, Submit, Comment:
+		defer func() { <-limitWriteCh }()
+	}
+
 	opType, respTime, endTs := op.DoOperation()
 
 	measurementsCh <- measurement{
@@ -85,7 +91,6 @@ func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]mea
 
 // Client ...
 func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration) {
-
 	target := w.config.Benchmark.TargetLoad
 	interArrival := time.Duration(1e9/float64(target)) * time.Nanosecond
 
@@ -104,7 +109,8 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 	warmpupEnd := st.Add(time.Duration(w.config.Benchmark.Warmup) * time.Second)
 	warmupShrortCirc := true
 
-	limitCh := make(chan struct{}, w.config.Benchmark.MaxInFlight)
+	limitReadCh := make(chan struct{}, w.config.Benchmark.MaxInFlightRead)
+	limitWriteCh := make(chan struct{}, w.config.Benchmark.MaxInFlightWrite)
 
 	go measurementsConsumer(measurementsCh, &measurementBuff, doneCh, warmpupEnd, end)
 
@@ -124,11 +130,6 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 			}
 			continue
 		}
-		select {
-		case limitCh <- struct{}{}:
-		default:
-			continue
-		}
 
 		switch workloadType {
 		case Simple:
@@ -137,7 +138,22 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 			op = w.NextOpComplete()
 		}
 
-		go doOperationAsync(op, measurementsCh, &pending, limitCh)
+		switch op.(type) {
+		case Frontpage, Story:
+			select {
+			case limitReadCh <- struct{}{}:
+			default:
+				continue
+			}
+		case StoryVote, CommentVote, Submit, Comment:
+			select {
+			case limitWriteCh <- struct{}{}:
+			default:
+				continue
+			}
+		}
+
+		go doOperationAsync(op, measurementsCh, &pending, limitReadCh, limitWriteCh)
 
 		opCnt++
 		totalOpCnt++

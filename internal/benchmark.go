@@ -20,7 +20,7 @@ type Benchmark struct {
 }
 
 // NewBenchmark ...
-func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFlight int64, dryRun bool) (Benchmark, error) {
+func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFlightR, maxInFlightW int64, dryRun bool) (Benchmark, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	conf, err := config.GetConfig(configFile)
@@ -36,8 +36,12 @@ func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFli
 		conf.Benchmark.TargetLoad = load / int64(threadCnt)
 	}
 
-	if maxInFlight > 0 {
-		conf.Benchmark.MaxInFlight = maxInFlight
+	if maxInFlightR > 0 {
+		conf.Benchmark.MaxInFlightRead = maxInFlightR
+	}
+
+	if maxInFlightW > 0 {
+		conf.Benchmark.MaxInFlightWrite = maxInFlightW
 	}
 
 	log.WithFields(log.Fields{"conf": conf}).Info("configuration")

@@ -14,11 +14,12 @@ import (
 func main() {
 	var configFile string
 	var threads int
-	var load, maxInFlight int64
+	var load, maxInFlightR, maxInFlightW int64
 	flag.StringVar(&configFile, "c", "noArg", "configuration file")
 	flag.IntVar(&threads, "t", 0, "number of client threads to be used")
 	flag.Int64Var(&load, "l", 0, "target load to be offered")
-	flag.Int64Var(&maxInFlight, "f", 0, "max operation in flight")
+	flag.Int64Var(&maxInFlightR, "fr", 0, "max read operations in flight")
+	flag.Int64Var(&maxInFlightW, "fw", 0, "max write operations in flight")
 	preload := flag.Bool("p", false, "preload")
 	dryRun := flag.Bool("d", false, "dryRun: print configuration and exit")
 	test := flag.Bool("test", false, "test: do 1 operation for each op type")
@@ -46,7 +47,7 @@ func main() {
 		return
 	}
 
-	bench, err := benchmark.NewBenchmark(configFile, *preload, threads, load, maxInFlight, *dryRun)
+	bench, err := benchmark.NewBenchmark(configFile, *preload, threads, load, maxInFlightR, maxInFlightW, *dryRun)
 	if err != nil {
 		log.Fatal(err)
 	}

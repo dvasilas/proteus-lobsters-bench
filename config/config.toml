@@ -17,7 +17,8 @@ warmup = 30
 threadCount = 1
 measuredsystem = "proteus"
 targetLoad = 30
-maxInFlight = 16
+maxInFlightRead = 4
+maxInFlightWrite = 4
 
 [Operations]
 writeRatio = 0.0
