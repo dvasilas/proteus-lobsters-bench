@@ -40,6 +40,10 @@ func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (D
 		return Datastore{}, err
 	}
 
+	db.SetMaxIdleConns(1024)
+	db.SetMaxOpenConns(1024)
+	db.SetConnMaxLifetime(10 * time.Minute)
+
 	return Datastore{Db: db}, nil
 }
 
