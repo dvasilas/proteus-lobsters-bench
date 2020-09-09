@@ -114,6 +114,7 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 
 	go measurementsConsumer(measurementsCh, &measurementBuff, doneCh, warmpupEnd, end)
 
+	nextOp := true
 	next = time.Now()
 
 	for time.Now().UnixNano() < end.UnixNano() {
@@ -131,23 +132,28 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 			continue
 		}
 
-		switch workloadType {
-		case Simple:
-			op = w.NextOpSimple()
-		case Complete:
-			op = w.NextOpComplete()
+		if nextOp {
+			nextOp = false
+			switch workloadType {
+			case Simple:
+				op = w.NextOpSimple()
+			case Complete:
+				op = w.NextOpComplete()
+			}
 		}
 
 		switch op.(type) {
 		case Frontpage, Story:
 			select {
 			case limitReadCh <- struct{}{}:
+				nextOp = true
 			default:
 				continue
 			}
 		case StoryVote, CommentVote, Submit, Comment:
 			select {
 			case limitWriteCh <- struct{}{}:
+				nextOp = true
 			default:
 				continue
 			}
