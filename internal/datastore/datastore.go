@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"errors"
 
 	//
 	_ "github.com/go-sql-driver/mysql"
@@ -47,38 +48,54 @@ func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (D
 	return Datastore{Db: db}, nil
 }
 
+func (ds Datastore) StoryVote(userID int, storyID int64, vote int) error {
+	query := fmt.Sprintf("INSERT INTO votes (story_id, vote, user_id) VALUES (%d, %d, %d)", storyID, vote, userID)
+
+	var err error
+
+	_, err = ds.Db.Exec(query)
+	
+	return err
+	
+}
+
 // Insert ...
 func (ds Datastore) Insert(table string, row map[string]interface{}) error {
+	
+	return errors.New("fix this")
 
-	insertStmtAttrs := "("
-	insertStmtAttrsValues := "("
-	insertValues := make([]interface{}, len(row))
+//	insertStmtAttrs := "("
+//	insertStmtAttrsValues := "("
+//	insertValues := make([]interface{}, len(row))
 
-	i := 0
-	for k, v := range row {
-		insertStmtAttrs += k
-		insertStmtAttrsValues += "?"
-		if i < len(row)-1 {
-			insertStmtAttrs += ", "
-			insertStmtAttrsValues += ", "
-		}
-		insertValues[i] = v
-		i++
-	}
+//	i := 0
+//	for k, v := range row {
+//		insertStmtAttrs += k
+//		insertStmtAttrsValues += "?"
+//		if i < len(row)-1 {
+//			insertStmtAttrs += ", "
+//			insertStmtAttrsValues += ", "
+//		}
+//		insertValues[i] = v
+//		i++
+//	}
 
-	insertStmtAttrs += ")"
-	insertStmtAttrsValues += ")"
+//	insertStmtAttrs += ")"
+//	insertStmtAttrsValues += ")"
 
-	query := "INSERT INTO " + table + " " + insertStmtAttrs + " VALUES " + insertStmtAttrsValues
-	stmtInsert, err := ds.Db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmtInsert.Close()
-
-	_, err = stmtInsert.Exec(insertValues...)
-
-	return err
+//	query := "INSERT INTO " + table + " " + insertStmtAttrs + " VALUES " + insertStmtAttrsValues
+	//stmtInsert, err := ds.Db.Prepare(query)
+	//if err != nil {
+	//	return err
+	//}
+	//defer stmtInsert.Close()
+	
+//	var err error
+//	st := time.Now()
+	//_, err = stmtInsert.Exec(query, insertValues...)
+//	_, err = ds.Db.Exec("INSERT INTO votes (user_id, story_id, vote) VALUES (1, 1, 1)")
+	
+//	return err
 }
 
 // Get ...

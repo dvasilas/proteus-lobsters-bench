@@ -217,18 +217,12 @@ func (op *Operations) Story() (time.Duration, error) {
 // StoryVote issues an up or down vote for the given story.
 func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 	var storyID int64
+	var err error
 	for storyID == 0 {
 		storyID = op.storyVoteSampler.Sample()
 	}
 	st := time.Now()
-	err := op.ds.Insert(
-		"votes",
-		map[string]interface{}{
-			"user_id":  1,
-			"story_id": storyID,
-			"vote":     vote,
-		})
-
+	err = op.ds.StoryVote(1, storyID, vote)
 	return time.Since(st), err
 }
 
