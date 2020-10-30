@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"errors"
 
 	//
 	_ "github.com/go-sql-driver/mysql"
@@ -48,54 +47,37 @@ func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (D
 	return Datastore{Db: db}, nil
 }
 
+// StoryVote ...
 func (ds Datastore) StoryVote(userID int, storyID int64, vote int) error {
 	query := fmt.Sprintf("INSERT INTO votes (story_id, vote, user_id) VALUES (%d, %d, %d)", storyID, vote, userID)
-
 	var err error
-
 	_, err = ds.Db.Exec(query)
-	
 	return err
-	
 }
 
-// Insert ...
-func (ds Datastore) Insert(table string, row map[string]interface{}) error {
-	
-	return errors.New("fix this")
+// Adduser ...
+func (ds Datastore) Adduser(username string) error {
+	query := fmt.Sprintf("INSERT INTO users (username) VALUES ('%s')", username)
+	var err error
+	_, err = ds.Db.Exec(query)
+	return err
+}
 
-//	insertStmtAttrs := "("
-//	insertStmtAttrsValues := "("
-//	insertValues := make([]interface{}, len(row))
+// Submit ...
+func (ds Datastore) Submit(userID int, title, description, shortID string) error {
+	query := fmt.Sprintf("INSERT INTO stories (user_id, title, description, short_id) VALUES (%d, '%s', '%s', '%s')", userID, title, description, shortID)
+	var err error
+	_, err = ds.Db.Exec(query)
+	return err
+}
 
-//	i := 0
-//	for k, v := range row {
-//		insertStmtAttrs += k
-//		insertStmtAttrsValues += "?"
-//		if i < len(row)-1 {
-//			insertStmtAttrs += ", "
-//			insertStmtAttrsValues += ", "
-//		}
-//		insertValues[i] = v
-//		i++
-//	}
-
-//	insertStmtAttrs += ")"
-//	insertStmtAttrsValues += ")"
-
-//	query := "INSERT INTO " + table + " " + insertStmtAttrs + " VALUES " + insertStmtAttrsValues
-	//stmtInsert, err := ds.Db.Prepare(query)
-	//if err != nil {
-	//	return err
-	//}
-	//defer stmtInsert.Close()
-	
-//	var err error
-//	st := time.Now()
-	//_, err = stmtInsert.Exec(query, insertValues...)
-//	_, err = ds.Db.Exec("INSERT INTO votes (user_id, story_id, vote) VALUES (1, 1, 1)")
-	
-//	return err
+// Comment ...
+func (ds Datastore) Comment(userID int, storyID int64, comment string) error {
+	query := fmt.Sprintf("INSERT INTO comments (user_id, story_id, comment) VALUES (%d, %d, '%s')", userID, storyID, comment)
+	fmt.Println(query)
+	var err error
+	_, err = ds.Db.Exec(query)
+	return err
 }
 
 // Get ...

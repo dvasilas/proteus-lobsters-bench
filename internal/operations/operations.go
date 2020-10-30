@@ -76,7 +76,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 
 // Frontpage renders the frontpage (https://lobste.rs/).
 func (op *Operations) Frontpage() (time.Duration, error) {
-	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_count FROM stories ORDER BY vote_count DESC LIMIT %d",
 		op.config.Operations.Homepage.StoriesLimit)
 
 	var duration time.Duration
@@ -104,8 +104,8 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 		// 	}
 		// 	stories[i].StoryID = val
 
-		// 	if _, ok := entry.GetAttributes()["vote_sum"]; ok {
-		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_sum"]), 10, 64)
+		// 	if _, ok := entry.GetAttributes()["vote_count"]; ok {
+		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_count"]), 10, 64)
 		// 		if err != nil {
 		// 			return Homepage{}, err
 		// 		}
@@ -175,7 +175,7 @@ func (op *Operations) Story() (time.Duration, error) {
 	}
 	shortID := idToShortID(storyID)
 
-	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories WHERE short_id = '%s'", shortID)
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_count FROM stories WHERE short_id = '%s'", shortID)
 
 	var duration time.Duration
 	st := time.Now()
@@ -198,8 +198,8 @@ func (op *Operations) Story() (time.Duration, error) {
 		// 	}
 		// 	story.StoryID = val
 
-		// 	if _, ok := entry.GetAttributes()["vote_sum"]; ok {
-		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_sum"]), 10, 64)
+		// 	if _, ok := entry.GetAttributes()["vote_count"]; ok {
+		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_count"]), 10, 64)
 		// 		if err != nil {
 		// 			return Story{}, err
 		// 		}
@@ -264,16 +264,7 @@ func (op *Operations) Submit() (time.Duration, error) {
 	}
 
 	st := time.Now()
-	err = op.ds.Insert(
-		"stories",
-		map[string]interface{}{
-			"user_id":     1,
-			"title":       fmt.Sprintf("story %d", id),
-			"description": description,
-			"short_id":    idToShortID(id),
-		},
-	)
-
+	err = op.ds.Submit(1, fmt.Sprintf("story %d", id), description, idToShortID(id))
 	return time.Since(st), err
 }
 
@@ -291,15 +282,7 @@ func (op *Operations) Comment() (time.Duration, error) {
 	}
 
 	st := time.Now()
-	err = op.ds.Insert(
-		"comments",
-		map[string]interface{}{
-			"user_id":  1,
-			"story_id": storyID,
-			"comment":  comment,
-		},
-	)
-
+	err = op.ds.Comment(1, storyID, comment)
 	return time.Since(st), err
 }
 
@@ -309,14 +292,7 @@ func (op *Operations) AddUser() error {
 	if err != nil {
 		return err
 	}
-	if err := op.ds.Insert(
-		"users",
-		map[string]interface{}{"username": userName},
-	); err != nil {
-		return err
-	}
-
-	return nil
+	return op.ds.Adduser(userName[:10])
 }
 
 // Close ...

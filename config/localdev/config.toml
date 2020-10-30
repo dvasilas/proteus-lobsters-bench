@@ -10,18 +10,19 @@ poolSize = 256
 poolOverflow = 256
 
 [Benchmark]
-opCount = 100
+opCount = 1
 runtime = 20
-doWarmup = true
+doWarmup = false
 warmup = 10
 threadCount = 1
-measuredSystem = "proteus"
+# measuredSystem = "proteus"
+measuredSystem = "mysql_mv"
 targetLoad = 10
-maxInFlightRead = 4
-maxInFlightWrite = 4
+maxInFlightRead = 1
+maxInFlightWrite = 1
 
 [Operations]
-writeRatio = 0.5
+writeRatio = 0.0
 downVoteRatio = 0.2
 
 [Operations.Homepage]

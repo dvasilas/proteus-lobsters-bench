@@ -22,7 +22,6 @@ type QueryEngine interface {
 // ProteusQueryEngine ...
 type ProteusQueryEngine struct {
 	proteusClient *proteusclient.Client
-	projection    []string
 }
 
 // --------------------- Proteus --------------------
@@ -51,14 +50,13 @@ func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing 
 
 	err = errors.New("not tried yet")
 	for err != nil {
-		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
+		_, err = c.Query("SELECT title, description, short_id, user_id, vote_count FROM stories ORDER BY vote_count DESC LIMIT 2")
 		time.Sleep(2 * time.Second)
 		fmt.Println("retying a test query", err)
 	}
 
 	return ProteusQueryEngine{
 		proteusClient: c,
-		projection:    []string{"title", "description", "short_id", "user_id", "vote_sum"},
 	}, nil
 }
 
@@ -92,15 +90,9 @@ func NewMySQLWithViewsQE(ds *datastore.Datastore) MySQLWithViewsQE {
 
 // Query ...
 func (qe MySQLWithViewsQE) Query(query string) (interface{}, error) {
-	projection := []string{"title", "description", "short_id", "vote_count"}
+	projection := []string{"title", "description", "short_id", "user_id", "vote_count"}
 
-	limit := -1
-	queryStr := fmt.Sprintf("SELECT title, description, short_id, vote_count "+
-		"FROM stories "+
-		"ORDER BY vote_count DESC "+
-		"LIMIT %d",
-		limit)
-	rows, err := qe.ds.Db.Query(queryStr)
+	rows, err := qe.ds.Db.Query(query)
 	if err != nil {
 		return nil, err
 	}
