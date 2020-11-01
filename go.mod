@@ -2,8 +2,6 @@ module github.com/dvasilas/proteus-lobsters-bench
 
 go 1.14
 
-replace github.com/dvasilas/proteus => /Users/dimvas/go/src/github.com/dvasilas/proteus
-
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/dvasilas/proteus v0.0.0-20200905082340-12d8343c577d

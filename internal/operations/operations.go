@@ -236,19 +236,19 @@ func (op *Operations) CommentVote(vote int) (time.Duration, error) {
 	var duration time.Duration
 
 	st := time.Now()
-	storyID, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
+	_, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
 	if err != nil {
 		return duration, err
 	}
 
-	err = op.ds.Insert(
-		"votes",
-		map[string]interface{}{
-			"user_id":    1,
-			"story_id":   storyID,
-			"comment_id": commentID,
-			"vote":       vote,
-		})
+	//err = op.ds.Insert(
+	//	"votes",
+	//	map[string]interface{}{
+	//		"user_id":    1,
+	//		"story_id":   storyID,
+	//		"comment_id": commentID,
+	//		"vote":       vote,
+	//	})
 	return time.Since(st), err
 }
 

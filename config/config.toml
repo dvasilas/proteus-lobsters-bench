@@ -15,13 +15,14 @@ runtime = 120
 doWarmup = true
 warmup = 30
 threadCount = 1
-measuredsystem = "proteus"
+#measuredsystem = "proteus"
+measuredsystem = "mysql_mv"
 targetLoad = 30
 maxInFlightRead = 4
 maxInFlightWrite = 4
 
 [Operations]
-writeRatio = 0.0
+writeRatio = 1.0
 downVoteRatio = 0.1
 
 [Operations.Homepage]
