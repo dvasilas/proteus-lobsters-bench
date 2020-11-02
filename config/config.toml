@@ -22,7 +22,7 @@ maxInFlightRead = 4
 maxInFlightWrite = 4
 
 [Operations]
-writeRatio = 1.0
+writeRatio = 0.05
 downVoteRatio = 0.1
 
 [Operations.Homepage]
