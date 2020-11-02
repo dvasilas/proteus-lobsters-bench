@@ -17,9 +17,10 @@ func (d durations) percentile(p float64) time.Duration {
 }
 
 type threadRawMeasurements struct {
-	buf        map[string][]time.Duration
-	runtime    time.Duration
-	opsOffered int64
+	buf            map[string][]time.Duration
+	runtime        time.Duration
+	opsOffered     int64
+	deadlockAborts int64
 }
 
 // Perf ...
@@ -40,10 +41,11 @@ type OpMetrics struct {
 
 // Metrics ...
 type Metrics struct {
-	Runtime      time.Duration
-	LoadOffered  float64
-	Throughput   float64
-	PerOpMetrics map[string]OpMetrics
+	Runtime        time.Duration
+	LoadOffered    float64
+	Throughput     float64
+	PerOpMetrics   map[string]OpMetrics
+	DeadlockAborts int64
 }
 
 // New ...
@@ -54,12 +56,13 @@ func New() *Perf {
 }
 
 //ReportMeasurements ...
-func (p *Perf) ReportMeasurements(runtime time.Duration, opsOffered int64, m map[string][]time.Duration) {
+func (p *Perf) ReportMeasurements(runtime time.Duration, opsOffered int64, m map[string][]time.Duration, deadlockAborts int64) {
 	p.Lock()
 	p.measurementsBuf = append(p.measurementsBuf, threadRawMeasurements{
-		buf:        m,
-		runtime:    runtime,
-		opsOffered: opsOffered,
+		buf:            m,
+		runtime:        runtime,
+		opsOffered:     opsOffered,
+		deadlockAborts: deadlockAborts,
 	})
 	p.Unlock()
 }
@@ -67,6 +70,7 @@ func (p *Perf) ReportMeasurements(runtime time.Duration, opsOffered int64, m map
 // CalculateMetrics ...
 func (p *Perf) CalculateMetrics() Metrics {
 	var totalOpsOffered int64
+	var totalDeadlockAborts int64
 	var totalRuntime time.Duration
 	aggregateMeasurements := make(map[string]durations)
 
@@ -80,6 +84,9 @@ func (p *Perf) CalculateMetrics() Metrics {
 				rawMeasurements...,
 			)
 		}
+
+		totalDeadlockAborts += threadReport.deadlockAborts
+
 	}
 
 	for _, threadMeasurements := range aggregateMeasurements {
@@ -110,6 +117,8 @@ func (p *Perf) CalculateMetrics() Metrics {
 	}
 
 	m.Throughput = float64(totalOpCnt) / totalRuntime.Seconds() * float64(len(p.measurementsBuf))
+
+	m.DeadlockAborts = totalDeadlockAborts
 
 	return m
 }

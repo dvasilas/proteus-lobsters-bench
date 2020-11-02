@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net"
@@ -47,12 +48,50 @@ func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (D
 	return Datastore{Db: db}, nil
 }
 
-// StoryVote ...
-func (ds Datastore) StoryVote(userID int, storyID int64, vote int) error {
+// StoryVoteSimple ...
+func (ds Datastore) StoryVoteSimple(userID int, storyID int64, vote int) error {
 	query := fmt.Sprintf("INSERT INTO votes (story_id, vote, user_id) VALUES (%d, %d, %d)", storyID, vote, userID)
 	var err error
 	_, err = ds.Db.Exec(query)
 	return err
+}
+
+// StoryVoteUpdateCount ...
+func (ds Datastore) StoryVoteUpdateCount(userID int, storyID int64, vote int) error {
+	ctx := context.Background()
+	tx, err := ds.Db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	insertVote := fmt.Sprintf("INSERT INTO votes (story_id, vote, user_id) VALUES (%d, %d, %d)", storyID, vote, userID)
+	_, err = tx.ExecContext(ctx, insertVote)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	selectStory := fmt.Sprintf("SELECT vote_count FROM stories WHERE id = %d", storyID)
+	row := tx.QueryRow(selectStory)
+	var voteCount int64
+	err = row.Scan(&voteCount)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	updateStory := fmt.Sprintf("UPDATE stories SET vote_count=%d WHERE id = %d", voteCount+int64(vote), storyID)
+	_, err = tx.ExecContext(ctx, updateStory)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the change if all queries ran successfully
+	return tx.Commit()
+
+	// _, err = ds.Db.Exec(query)
+	// return err
 }
 
 // Adduser ...
@@ -74,7 +113,6 @@ func (ds Datastore) Submit(userID int, title, description, shortID string) error
 // Comment ...
 func (ds Datastore) Comment(userID int, storyID int64, comment string) error {
 	query := fmt.Sprintf("INSERT INTO comments (user_id, story_id, comment) VALUES (%d, %d, '%s')", userID, storyID, comment)
-	fmt.Println(query)
 	var err error
 	_, err = ds.Db.Exec(query)
 	return err

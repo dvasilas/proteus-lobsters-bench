@@ -78,8 +78,8 @@ func (b Benchmark) Run(workloadType workload.Type) error {
 			defer wg.Done()
 			// measurements, measurementBufferSize, startTime, endTime := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
 			// b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
-			runtime, opsOffered, durations := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
-			b.measurements.ReportMeasurements(runtime, opsOffered, durations)
+			runtime, opsOffered, durations, deadlockAborts := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
+			b.measurements.ReportMeasurements(runtime, opsOffered, durations, deadlockAborts)
 		}()
 	}
 
@@ -104,6 +104,7 @@ func (b Benchmark) PrintMeasurements() {
 	fmt.Printf("Runtime(s): %.3f\n", metrics.Runtime.Seconds())
 	fmt.Printf("Load offered: %.3f\n", metrics.LoadOffered)
 	fmt.Printf("Total throughput: %.5f\n", metrics.Throughput)
+	fmt.Printf("Aborted ops: %d\n", metrics.DeadlockAborts)
 	for opType, metrics := range metrics.PerOpMetrics {
 		fmt.Printf("[%s] Operation count: %d\n", opType, metrics.OpCount)
 		fmt.Printf("[%s] Throughput: %.5f\n", opType, metrics.Throughput)

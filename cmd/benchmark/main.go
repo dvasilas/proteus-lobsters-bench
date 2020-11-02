@@ -16,7 +16,7 @@ func main() {
 	var threads int
 	var load, maxInFlightR, maxInFlightW int64
 	flag.StringVar(&configFile, "c", "noArg", "configuration file")
-	flag.IntVar(&threads, "t", 0, "number of client threads to be used")
+	flag.IntVar(&threads, "t", 1, "number of client threads to be used")
 	flag.Int64Var(&load, "l", 0, "target load to be offered")
 	flag.Int64Var(&maxInFlightR, "fr", 0, "max read operations in flight")
 	flag.Int64Var(&maxInFlightW, "fw", 0, "max write operations in flight")

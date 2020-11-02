@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"runtime/debug"
+	"strings"
 	"sync"
 
 	"time"
@@ -70,15 +71,19 @@ func doOperationAsync(op Operation, measurementsCh chan measurement, pendingOper
 	}
 }
 
-func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]measurement, doneCh chan bool, warmupEnd, end time.Time) {
+func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]measurement, deadlockAborts *int64, doneCh chan bool, warmupEnd, end time.Time) {
 	for i, t := 0, time.NewTimer(2*time.Second); true; i++ {
 		select {
 		case m, isopen := <-measurementsCh:
 			if !isopen {
 				return
 			}
-			if m.endTs.UnixNano() > warmupEnd.UnixNano() && m.endTs.UnixNano() < end.UnixNano() {
-				*measurementBuf = append(*measurementBuf, m)
+			if m.opType == Deadlock {
+				*deadlockAborts++
+			} else {
+				if m.endTs.UnixNano() > warmupEnd.UnixNano() && m.endTs.UnixNano() < end.UnixNano() {
+					*measurementBuf = append(*measurementBuf, m)
+				}
 			}
 			t.Reset(2 * time.Second)
 		case <-t.C:
@@ -90,7 +95,7 @@ func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]mea
 }
 
 // Client ...
-func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration) {
+func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration, int64) {
 	target := w.config.Benchmark.TargetLoad
 	interArrival := time.Duration(1e9/float64(target)) * time.Nanosecond
 
@@ -98,6 +103,8 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 	var pending int64
 	measurementBuff := make([]measurement, 0)
 	doneCh := make(chan bool)
+
+	deadlockAborts := int64(0)
 
 	var totalOpCnt, opCnt int64
 	var op Operation
@@ -112,7 +119,7 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 	limitReadCh := make(chan struct{}, w.config.Benchmark.MaxInFlightRead)
 	limitWriteCh := make(chan struct{}, w.config.Benchmark.MaxInFlightWrite)
 
-	go measurementsConsumer(measurementsCh, &measurementBuff, doneCh, warmpupEnd, end)
+	go measurementsConsumer(measurementsCh, &measurementBuff, &deadlockAborts, doneCh, warmpupEnd, end)
 
 	nextOp := true
 	next = time.Now()
@@ -183,7 +190,7 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 		}
 	}
 
-	return runtime, opCnt, durations
+	return runtime, opCnt, durations, deadlockAborts
 }
 
 // OpType ..
@@ -196,6 +203,8 @@ const (
 	Write OpType = iota
 	// Done ...
 	Done OpType = iota
+	// Deadlock ...
+	Deadlock OpType = iota
 )
 
 // Operation ...
@@ -213,6 +222,9 @@ type StoryVote struct {
 func (op StoryVote) DoOperation() (OpType, time.Duration, time.Time) {
 	respTime, err := op.ops.StoryVote(op.vote)
 	if err != nil {
+		if strings.Contains(err.Error(), "Deadlock") {
+			return Deadlock, respTime, time.Now()
+		}
 		er(err)
 	}
 	return Write, respTime, time.Now()

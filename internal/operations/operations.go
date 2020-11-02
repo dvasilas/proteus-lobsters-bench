@@ -222,7 +222,11 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 		storyID = op.storyVoteSampler.Sample()
 	}
 	st := time.Now()
-	err = op.ds.StoryVote(1, storyID, vote)
+	if op.config.Benchmark.MeasuredSystem == "proteus" || op.config.Benchmark.MeasuredSystem == "mysql_plain" {
+		err = op.ds.StoryVoteSimple(1, storyID, vote)
+	} else {
+		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
+	}
 	return time.Since(st), err
 }
 
