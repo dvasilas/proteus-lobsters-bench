@@ -15,6 +15,7 @@ type BenchmarkConfig struct {
 			Users    int64
 			Stories  int64
 			Comments int64
+			Votes    int64
 		}
 	}
 	Operations struct {

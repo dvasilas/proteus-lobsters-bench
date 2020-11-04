@@ -18,7 +18,7 @@ type Datastore struct {
 
 // NewDatastore ...
 func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (Datastore, error) {
-	connStr := fmt.Sprintf("%s:%s@tcp(%s)/%s",
+	connStr := fmt.Sprintf("%s:%s@tcp(%s)/%s?interpolateParams=true",
 		accessKeyID,
 		secretAccessKey,
 		endpoint,
@@ -71,7 +71,7 @@ func (ds Datastore) StoryVoteUpdateCount(userID int, storyID int64, vote int) er
 		return err
 	}
 
-	selectStory := fmt.Sprintf("SELECT vote_count FROM stories WHERE id = %d", storyID)
+	selectStory := fmt.Sprintf("SELECT vote_sum FROM stories WHERE id = %d", storyID)
 	row := tx.QueryRow(selectStory)
 	var voteCount int64
 	err = row.Scan(&voteCount)
@@ -80,7 +80,7 @@ func (ds Datastore) StoryVoteUpdateCount(userID int, storyID int64, vote int) er
 		return err
 	}
 
-	updateStory := fmt.Sprintf("UPDATE stories SET vote_count=%d WHERE id = %d", voteCount+int64(vote), storyID)
+	updateStory := fmt.Sprintf("UPDATE stories SET vote_sum=%d WHERE id = %d", voteCount+int64(vote), storyID)
 	_, err = tx.ExecContext(ctx, updateStory)
 	if err != nil {
 		tx.Rollback()

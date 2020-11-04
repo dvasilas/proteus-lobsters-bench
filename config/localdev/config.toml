@@ -15,14 +15,14 @@ runtime = 20
 doWarmup = false
 warmup = 10
 threadCount = 1
-# measuredSystem = "proteus"
-measuredSystem = "mysql_mv"
+measuredSystem = "proteus"
+# measuredSystem = "mysql_mv"
 targetLoad = 10
 maxInFlightRead = 1
 maxInFlightWrite = 1
 
 [Operations]
-writeRatio = 0.0
+writeRatio = 0.5
 downVoteRatio = 0.2
 
 [Operations.Homepage]
@@ -32,3 +32,4 @@ storiesLimit = 5
 users = 100
 stories = 1000
 comments = 1000
+votes = 1000

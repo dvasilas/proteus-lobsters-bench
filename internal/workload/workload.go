@@ -436,6 +436,21 @@ func (w Workload) Preload() error {
 	wg.Wait()
 	fmt.Printf("Created %d comments\n", w.config.Preload.RecordCount.Comments)
 
+	for t := 1; t <= preadloadThreads; t++ {
+		wg.Add(1)
+		go func(count int64) {
+			defer wg.Done()
+			for i := int64(0); i < count; i++ {
+				if _, err := w.ops.StoryVote(1); err != nil {
+					panic(err)
+				}
+			}
+		}(w.config.Preload.RecordCount.Votes / int64(preadloadThreads))
+	}
+
+	wg.Wait()
+	fmt.Printf("Created %d votes\n", w.config.Preload.RecordCount.Votes)
+
 	fmt.Println("Preloading done")
 	return nil
 }

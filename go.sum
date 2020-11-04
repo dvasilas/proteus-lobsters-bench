@@ -36,6 +36,8 @@ github.com/dvasilas/proteus v0.0.0-20200905075903-d14a90110ff7 h1:yGG8elJQ6hPumb
 github.com/dvasilas/proteus v0.0.0-20200905075903-d14a90110ff7/go.mod h1:1KXazmdxM2evCoO+kX8lHEBCuV122IG4pSK7bHEoFNo=
 github.com/dvasilas/proteus v0.0.0-20200905082340-12d8343c577d h1:0F4tUIm3Snq2NSYX8sM++5z+D9H8FRyY94p1Spn1yb4=
 github.com/dvasilas/proteus v0.0.0-20200905082340-12d8343c577d/go.mod h1:1KXazmdxM2evCoO+kX8lHEBCuV122IG4pSK7bHEoFNo=
+github.com/dvasilas/proteus v0.0.0-20201104160359-9bf0a519758c h1:nOQ7xkR2jDmVC+EYJyM1gvoFRK25k1G/iDe6c7b6jvU=
+github.com/dvasilas/proteus v0.0.0-20201104160359-9bf0a519758c/go.mod h1:TO9KwsGfoTnlQkw7fdxJyyv3d6FA2D/jutL5l+5mW2E=
 github.com/dvasilas/proteus-lobsters-bench v0.0.0-20200826202438-fe42c98252df/go.mod h1:UQaBTvxd9Co/E0eA3P8N8/pp29gxDmhHONzghfIhGNc=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
@@ -178,6 +180,7 @@ golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5h
 golang.org/x/sys v0.0.0-20181116152217-5ac8a444bdc5/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20190422165155-953cdadca894 h1:Cz4ceDQGXuKRnVBDTS23GTn/pU5OE2C0WrNTOYK1Uuc=
 golang.org/x/sys v0.0.0-20190422165155-953cdadca894/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200106162015-b016eb3dc98e/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

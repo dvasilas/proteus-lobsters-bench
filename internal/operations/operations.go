@@ -76,7 +76,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 
 // Frontpage renders the frontpage (https://lobste.rs/).
 func (op *Operations) Frontpage() (time.Duration, error) {
-	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_count FROM stories ORDER BY vote_count DESC LIMIT %d",
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
 		op.config.Operations.Homepage.StoriesLimit)
 
 	var duration time.Duration
@@ -91,62 +91,12 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 	switch op.config.Benchmark.MeasuredSystem {
 	case "proteus":
 		// response := resp.(*pb.QueryResp)
-		// stories := make([]Story, len(response.GetRespRecord()))
-		// for i, entry := range response.GetRespRecord() {
-		// 	stories[i] = Story{
-		// 		Title:   string(entry.GetAttributes()["title"]),
-		// 		ShortID: string(entry.GetAttributes()["short_id"]),
-		// 	}
-
-		// 	val, err := strconv.ParseInt(entry.GetRecordId(), 10, 64)
-		// 	if err != nil {
-		// 		return Homepage{}, err
-		// 	}
-		// 	stories[i].StoryID = val
-
-		// 	if _, ok := entry.GetAttributes()["vote_count"]; ok {
-		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_count"]), 10, 64)
-		// 		if err != nil {
-		// 			return Homepage{}, err
-		// 		}
-		// 		stories[i].VoteCount = val
-		// 	}
+		// for _, entry := range response.GetRespRecord() {
+		// 	fmt.Println(entry.GetAttributes()["title"], entry.GetAttributes()["short_id"], entry.GetAttributes()["vote_sum"])
 		// }
-		// hp.Stories = stories
+		// fmt.Println()
 	case "mysql_plain":
-		// response := resp.([]map[string]string)
-		// stories := make([]Story, len(response))
-		// for i, entry := range response {
-		// 	stories[i] = Story{
-		// 		Title:       entry["title"],
-		// 		Description: entry["description"],
-		// 		ShortID:     entry["short_id"],
-		// 	}
-
-		// 	val, err := strconv.ParseInt(entry["vote_count"], 10, 64)
-		// 	if err != nil {
-		// 		return duration, Homepage{}, err
-		// 	}
-		// 	stories[i].VoteCount = val
-		// }
-		// hp.Stories = stories
 	case "mysql_mv":
-		// response := resp.([]map[string]string)
-		// stories := make([]Story, len(response))
-		// for i, entry := range response {
-		// 	stories[i] = Story{
-		// 		Title:       entry["title"],
-		// 		Description: entry["description"],
-		// 		ShortID:     entry["short_id"],
-		// 	}
-
-		// 	val, err := strconv.ParseInt(entry["vote_count"], 10, 64)
-		// 	if err != nil {
-		// 		return duration, Homepage{}, err
-		// 	}
-		// 	stories[i].VoteCount = val
-		// }
-		// hp.Stories = stories
 	}
 
 	return duration, nil
@@ -175,7 +125,7 @@ func (op *Operations) Story() (time.Duration, error) {
 	}
 	shortID := idToShortID(storyID)
 
-	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_count FROM stories WHERE short_id = '%s'", shortID)
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories WHERE short_id = '%s'", shortID)
 
 	var duration time.Duration
 	st := time.Now()
@@ -198,8 +148,8 @@ func (op *Operations) Story() (time.Duration, error) {
 		// 	}
 		// 	story.StoryID = val
 
-		// 	if _, ok := entry.GetAttributes()["vote_count"]; ok {
-		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_count"]), 10, 64)
+		// 	if _, ok := entry.GetAttributes()["vote_sum"]; ok {
+		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_sum"]), 10, 64)
 		// 		if err != nil {
 		// 			return Story{}, err
 		// 		}

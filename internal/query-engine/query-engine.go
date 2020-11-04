@@ -50,7 +50,7 @@ func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing 
 
 	err = errors.New("not tried yet")
 	for err != nil {
-		_, err = c.Query("SELECT title, description, short_id, user_id, vote_count FROM stories ORDER BY vote_count DESC LIMIT 2")
+		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
 		time.Sleep(2 * time.Second)
 		fmt.Println("retying a test query", err)
 	}
@@ -90,7 +90,7 @@ func NewMySQLWithViewsQE(ds *datastore.Datastore) MySQLWithViewsQE {
 
 // Query ...
 func (qe MySQLWithViewsQE) Query(query string) (interface{}, error) {
-	projection := []string{"title", "description", "short_id", "user_id", "vote_count"}
+	projection := []string{"title", "description", "short_id", "user_id", "vote_sum"}
 
 	rows, err := qe.ds.Db.Query(query)
 	if err != nil {
@@ -142,18 +142,18 @@ func NewMySQLPlainQE(ds *datastore.Datastore) MySQLPlainQE {
 
 // Query ...
 func (qe MySQLPlainQE) Query(query string) (interface{}, error) {
-	projection := []string{"story_id", "title", "description", "short_id", "vote_count"}
+	projection := []string{"story_id", "title", "description", "short_id", "vote_sum"}
 
 	limit := -1
-	queryStr := fmt.Sprintf("SELECT story_id, s.title, s.description, s.short_id, vote_count "+
+	queryStr := fmt.Sprintf("SELECT story_id, s.title, s.description, s.short_id, vote_sum "+
 		"FROM stories s "+
 		"JOIN ( "+
-		"SELECT v.story_id, SUM(v.vote) as vote_count "+
+		"SELECT v.story_id, SUM(v.vote) as vote_sum "+
 		"FROM votes v "+
 		"WHERE v.comment_id IS NULL "+
 		"GROUP BY v.story_id) "+
 		"vc ON s.id = vc.story_id "+
-		"ORDER BY vote_count DESC "+
+		"ORDER BY vote_sum DESC "+
 		"LIMIT %d",
 		limit)
 
