@@ -78,8 +78,8 @@ func (b Benchmark) Run(workloadType workload.Type) error {
 			defer wg.Done()
 			// measurements, measurementBufferSize, startTime, endTime := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
 			// b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
-			runtime, opsOffered, durations, deadlockAborts := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
-			b.measurements.ReportMeasurements(runtime, opsOffered, durations, deadlockAborts)
+			runtime, opsOffered, durations, deadlockAborts, hist := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
+			b.measurements.ReportMeasurements(runtime, opsOffered, durations, deadlockAborts, hist)
 		}()
 	}
 
@@ -107,10 +107,16 @@ func (b Benchmark) PrintMeasurements() {
 	fmt.Printf("Aborted ops: %d\n", metrics.DeadlockAborts)
 	for opType, metrics := range metrics.PerOpMetrics {
 		fmt.Printf("[%s] Operation count: %d\n", opType, metrics.OpCount)
+		fmt.Printf("[%s] Operation count hist: %d\n", opType, metrics.OpCounthist)
 		fmt.Printf("[%s] Throughput: %.5f\n", opType, metrics.Throughput)
+		fmt.Printf("[%s] Throughput hist: %.5f\n", opType, metrics.Throughputhist)
 		fmt.Printf("[%s] p50(ms): %.5f\n", opType, metrics.P50)
+		fmt.Printf("[%s] p50(ms) hist: %.5f\n", opType, metrics.P50hist)
 		fmt.Printf("[%s] p90(ms): %.5f\n", opType, metrics.P90)
+		fmt.Printf("[%s] p90(ms) hist: %.5f\n", opType, metrics.P90hist)
 		fmt.Printf("[%s] p95(ms): %.5f\n", opType, metrics.P95)
+		fmt.Printf("[%s] p95(ms) hist: %.5f\n", opType, metrics.P95hist)
 		fmt.Printf("[%s] p99(ms): %.5f\n", opType, metrics.P99)
+		fmt.Printf("[%s] p99(ms) hist: %.5f\n", opType, metrics.P99hist)
 	}
 }

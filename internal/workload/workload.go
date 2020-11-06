@@ -13,6 +13,7 @@ import (
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/operations"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/perf"
+	"google.golang.org/grpc/benchmark/stats"
 )
 
 // Type ...
@@ -95,7 +96,7 @@ func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]mea
 }
 
 // Client ...
-func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration, int64) {
+func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration, int64, map[string]*stats.Histogram) {
 	target := w.config.Benchmark.TargetLoad
 	interArrival := time.Duration(1e9/float64(target)) * time.Nanosecond
 
@@ -118,6 +119,16 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 
 	limitReadCh := make(chan struct{}, w.config.Benchmark.MaxInFlightRead)
 	limitWriteCh := make(chan struct{}, w.config.Benchmark.MaxInFlightWrite)
+
+	histogramOpts := stats.HistogramOptions{
+		// up to 500ms
+		NumBuckets:   50000,
+		GrowthFactor: .01,
+	}
+
+	hists := make(map[string]*stats.Histogram)
+	hists["read"] = stats.NewHistogram(histogramOpts)
+	hists["write"] = stats.NewHistogram(histogramOpts)
 
 	go measurementsConsumer(measurementsCh, &measurementBuff, &deadlockAborts, doneCh, warmpupEnd, end)
 
@@ -187,10 +198,11 @@ func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.D
 			durations["write"] = append(durations["write"], m.respTime)
 		} else {
 			durations["read"] = append(durations["read"], m.respTime)
+			hists["read"].Add(m.respTime.Nanoseconds())
 		}
 	}
 
-	return runtime, opCnt, durations, deadlockAborts
+	return runtime, opCnt, durations, deadlockAborts, hists
 }
 
 // OpType ..
