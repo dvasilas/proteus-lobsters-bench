@@ -1,7 +1,6 @@
 package queryengine
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -19,15 +18,20 @@ type QueryEngine interface {
 	Close()
 }
 
-// ProteusQueryEngine ...
-type ProteusQueryEngine struct {
+// ProteusQE ...
+type ProteusQE struct {
 	proteusClient *proteusclient.Client
 }
 
-// --------------------- Proteus --------------------
+// MysqlQE ...
+type MysqlQE struct {
+	ds *datastore.Datastore
+}
 
-// NewProteusQueryEngine ...
-func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing bool) (ProteusQueryEngine, error) {
+// --------------------- Proteus query engine --------------------
+
+// NewProteusQE ...
+func NewProteusQE(endpoint string, poolSize, poolOverflow int, tracing bool) (ProteusQE, error) {
 	for {
 		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
 		if err != nil {
@@ -41,11 +45,11 @@ func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing 
 
 	port, err := strconv.ParseInt(strings.Split(endpoint, ":")[1], 10, 64)
 	if err != nil {
-		return ProteusQueryEngine{}, err
+		return ProteusQE{}, err
 	}
 	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: int(port)}, poolSize, poolOverflow, tracing)
 	if err != nil {
-		return ProteusQueryEngine{}, err
+		return ProteusQE{}, err
 	}
 
 	err = errors.New("not tried yet")
@@ -55,13 +59,13 @@ func NewProteusQueryEngine(endpoint string, poolSize, poolOverflow int, tracing 
 		fmt.Println("retying a test query", err)
 	}
 
-	return ProteusQueryEngine{
+	return ProteusQE{
 		proteusClient: c,
 	}, nil
 }
 
 // Query ...
-func (qe ProteusQueryEngine) Query(query string) (resp interface{}, err error) {
+func (qe ProteusQE) Query(query string) (resp interface{}, err error) {
 	resp, err = qe.proteusClient.Query(query)
 	if err != nil {
 		return nil, err
@@ -70,51 +74,62 @@ func (qe ProteusQueryEngine) Query(query string) (resp interface{}, err error) {
 }
 
 // Close ...
-func (qe ProteusQueryEngine) Close() {
+func (qe ProteusQE) Close() {
 	qe.proteusClient.Close()
 }
 
-// ------------------ MySQL (with MVs) ---------------
+// ------------------ MySQL query engine ---------------
 
-// MySQLWithViewsQE ...
-type MySQLWithViewsQE struct {
-	ds *datastore.Datastore
-}
-
-// NewMySQLWithViewsQE ...
-func NewMySQLWithViewsQE(ds *datastore.Datastore) MySQLWithViewsQE {
-	return MySQLWithViewsQE{
+// NewMysqlQE ...
+func NewMysqlQE(ds *datastore.Datastore) MysqlQE {
+	return MysqlQE{
 		ds: ds,
 	}
 }
 
 // Query ...
-func (qe MySQLWithViewsQE) Query(query string) (interface{}, error) {
-	projection := []string{"title", "description", "short_id", "user_id", "vote_sum"}
-
+func (qe MysqlQE) Query(query string) (interface{}, error) {
 	rows, err := qe.ds.Db.Query(query)
 	if err != nil {
 		return nil, err
 	}
-
-	values := make([]sql.RawBytes, len(projection))
-	scanArgs := make([]interface{}, len(projection))
-	result := make([]map[string]string, 0)
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
 	defer rows.Close()
+
+	columns, _ := rows.Columns()
+	count := len(columns)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	result := make([]map[string]interface{}, 0)
+
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
-			return nil, err
+
+		for i := range columns {
+			valuePtrs[i] = &values[i]
 		}
-		row := make(map[string]string)
+
+		rows.Scan(valuePtrs...)
+
+		row := make(map[string]interface{})
 		for i, col := range values {
 			if col != nil {
-				row[projection[i]] = string(col)
+				row[columns[i]] = col
 			}
 		}
+
+		for i, col := range columns {
+			val := values[i]
+
+			b, ok := val.([]byte)
+			var v interface{}
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			row[col] = v
+		}
+
 		result = append(result, row)
 	}
 
@@ -122,71 +137,6 @@ func (qe MySQLWithViewsQE) Query(query string) (interface{}, error) {
 }
 
 // Close ...
-func (qe MySQLWithViewsQE) Close() {
-	qe.ds.Db.Close()
-}
-
-// ------------------ MySQL (no MVs) -----------------
-
-// MySQLPlainQE ...
-type MySQLPlainQE struct {
-	ds *datastore.Datastore
-}
-
-// NewMySQLPlainQE ...
-func NewMySQLPlainQE(ds *datastore.Datastore) MySQLPlainQE {
-	return MySQLPlainQE{
-		ds: ds,
-	}
-}
-
-// Query ...
-func (qe MySQLPlainQE) Query(query string) (interface{}, error) {
-	projection := []string{"story_id", "title", "description", "short_id", "vote_sum"}
-
-	limit := -1
-	queryStr := fmt.Sprintf("SELECT story_id, s.title, s.description, s.short_id, vote_sum "+
-		"FROM stories s "+
-		"JOIN ( "+
-		"SELECT v.story_id, SUM(v.vote) as vote_sum "+
-		"FROM votes v "+
-		"WHERE v.comment_id IS NULL "+
-		"GROUP BY v.story_id) "+
-		"vc ON s.id = vc.story_id "+
-		"ORDER BY vote_sum DESC "+
-		"LIMIT %d",
-		limit)
-
-	rows, err := qe.ds.Db.Query(queryStr)
-	if err != nil {
-		return nil, err
-	}
-
-	values := make([]sql.RawBytes, len(projection))
-	scanArgs := make([]interface{}, len(projection))
-	result := make([]map[string]string, 0)
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-	defer rows.Close()
-	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
-			return nil, err
-		}
-		row := make(map[string]string)
-		for i, col := range values {
-			if col != nil {
-				row[projection[i]] = string(col)
-			}
-		}
-		result = append(result, row)
-	}
-
-	return result, nil
-}
-
-// Close ...
-func (qe MySQLPlainQE) Close() {
+func (qe MysqlQE) Close() {
 	qe.ds.Db.Close()
 }

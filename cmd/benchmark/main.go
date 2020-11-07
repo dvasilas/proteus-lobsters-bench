@@ -7,7 +7,6 @@ import (
 	"text/tabwriter"
 
 	benchmark "github.com/dvasilas/proteus-lobsters-bench/internal"
-	"github.com/dvasilas/proteus-lobsters-bench/internal/workload"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,7 +22,6 @@ func main() {
 	preload := flag.Bool("p", false, "preload")
 	dryRun := flag.Bool("d", false, "dryRun: print configuration and exit")
 	test := flag.Bool("test", false, "test: do 1 operation for each op type")
-	macro := flag.Bool("M", false, "run macro benchmark")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stdout, "usage: -c config_file -s system [-p]")
@@ -72,12 +70,7 @@ func main() {
 		return
 	}
 
-	workloadType := workload.Simple
-	if *macro {
-		workloadType = workload.Complete
-	}
-
-	err = bench.Run(workloadType)
+	err = bench.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

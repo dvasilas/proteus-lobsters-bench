@@ -31,9 +31,9 @@ type BenchmarkConfig struct {
 		Runtime          int
 		Warmup           int
 		ThreadCount      int
-		OpCount          int64
 		MeasuredSystem   string
 		TargetLoad       int64
+		WorkloadType     string
 		MaxInFlightRead  int64
 		MaxInFlightWrite int64
 	}

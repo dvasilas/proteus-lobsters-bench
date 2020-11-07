@@ -5,12 +5,16 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
+	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/datastore"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/distributions"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	queryengine "github.com/dvasilas/proteus-lobsters-bench/internal/query-engine"
 )
 
@@ -25,18 +29,9 @@ type Operations struct {
 	StoryID             int64
 }
 
-// Homepage ...
-type Homepage struct {
-	Stories []Story
-}
-
-// Story ...
-type Story struct {
-	StoryID     int64
-	Title       string
-	Description string
-	ShortID     string
-	VoteCount   int64
+// Operation ...
+type Operation interface {
+	DoOperation() (measurements.OpType, time.Duration, time.Time)
 }
 
 // NewOperations ...
@@ -50,14 +45,12 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	if !conf.Benchmark.DoPreload {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
-			qe, err = queryengine.NewProteusQueryEngine(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
-		case "mysql_plain":
-			qe = queryengine.NewMySQLPlainQE(&ds)
-		case "mysql_mv":
-			qe = queryengine.NewMySQLWithViewsQE(&ds)
+		case "mysql":
+			qe = queryengine.NewMysqlQE(&ds)
 		default:
 			return nil, errors.New("invalid 'system' argument")
 		}
@@ -72,6 +65,98 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentStorySampler: distributions.NewSampler(commentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
 	}, nil
+}
+
+// StoryVote ...
+type StoryVote struct {
+	Ops  *Operations
+	Vote int
+}
+
+// DoOperation ...
+func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.StoryVote(op.Vote)
+	if err != nil {
+		if strings.Contains(err.Error(), "Deadlock") {
+			return measurements.Deadlock, respTime, time.Now()
+		}
+		er(err)
+	}
+	return measurements.Write, respTime, time.Now()
+}
+
+// StoryVote issues an up or down vote for the given story.
+func (op *Operations) StoryVote(vote int) (time.Duration, error) {
+	var storyID int64
+	var err error
+	for storyID == 0 {
+		storyID = op.storyVoteSampler.Sample()
+	}
+	st := time.Now()
+	if op.config.Benchmark.MeasuredSystem == "proteus" || op.config.Benchmark.MeasuredSystem == "mysql_plain" {
+		err = op.ds.StoryVoteSimple(1, storyID, vote)
+	} else {
+		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
+	}
+	return time.Since(st), err
+}
+
+// CommentVote ...
+type CommentVote struct {
+	Ops  *Operations
+	Vote int
+}
+
+// DoOperation ...
+func (op CommentVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.CommentVote(op.Vote)
+	if err != nil {
+		er(err)
+	}
+	return measurements.Write, respTime, time.Now()
+}
+
+// CommentVote issues an up or down vote for the given comment.
+func (op *Operations) CommentVote(vote int) (time.Duration, error) {
+
+	return 0, errors.New("not implemented")
+
+	// var commentID int64
+	// for commentID == 0 {
+	// 	commentID = op.commentVoteSampler.Sample()
+	// }
+
+	// var duration time.Duration
+
+	// st := time.Now()
+	// _, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
+	// if err != nil {
+	// 	return duration, err
+	// }
+
+	// //err = op.ds.Insert(
+	// //	"votes",
+	// //	map[string]interface{}{
+	// //		"user_id":    1,
+	// //		"story_id":   storyID,
+	// //		"comment_id": commentID,
+	// //		"vote":       vote,
+	// //	})
+	// return time.Since(st), err
+}
+
+// Frontpage ...
+type Frontpage struct {
+	Ops *Operations
+}
+
+// DoOperation ...
+func (op Frontpage) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.Frontpage()
+	if err != nil {
+		er(err)
+	}
+	return measurements.Read, respTime, time.Now()
 }
 
 // Frontpage renders the frontpage (https://lobste.rs/).
@@ -102,20 +187,19 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 	return duration, nil
 }
 
-// Recent renders recently submitted stories (https://lobste.rs/recent).
-func (op *Operations) Recent() {}
+// Story ...
+type Story struct {
+	Ops *Operations
+}
 
-// Comments renders recently submitted comments (https://lobste.rs/recent).
-func (op *Operations) Comments() {}
-
-// User renders a user's profile(https://lobste.rs/u/jonhoo).
-func (op *Operations) User(username string) {}
-
-// Login logs in a user.
-func (op *Operations) Login() {}
-
-// Logout logs out a user.
-func (op *Operations) Logout() {}
+// DoOperation ...
+func (op Story) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.Story()
+	if err != nil {
+		er(err)
+	}
+	return measurements.Read, respTime, time.Now()
+}
 
 // Story renders a particular stor based a given shortID (https://lobste.rs/s/cqnzl5/).
 func (op *Operations) Story() (time.Duration, error) {
@@ -137,26 +221,6 @@ func (op *Operations) Story() (time.Duration, error) {
 
 	switch op.config.Benchmark.MeasuredSystem {
 	case "proteus":
-		// response := resp.(*pb.QueryResp)
-		// for _, entry := range response.GetRespRecord() {
-		// 	story.Title = string(entry.GetAttributes()["title"])
-		// 	story.ShortID = string(entry.GetAttributes()["short_id"])
-
-		// 	val, err := strconv.ParseInt(entry.GetRecordId(), 10, 64)
-		// 	if err != nil {
-		// 		return Story{}, err
-		// 	}
-		// 	story.StoryID = val
-
-		// 	if _, ok := entry.GetAttributes()["vote_sum"]; ok {
-		// 		val, err := strconv.ParseInt(string(entry.GetAttributes()["vote_sum"]), 10, 64)
-		// 		if err != nil {
-		// 			return Story{}, err
-		// 		}
-		// 		story.VoteCount = val
-		// 	}
-		// }
-
 	case "mysql_plain":
 	case "mysql_mv":
 	}
@@ -164,62 +228,18 @@ func (op *Operations) Story() (time.Duration, error) {
 	return duration, nil
 }
 
-// StoryVote issues an up or down vote for the given story.
-func (op *Operations) StoryVote(vote int) (time.Duration, error) {
-	var storyID int64
-	var err error
-	for storyID == 0 {
-		storyID = op.storyVoteSampler.Sample()
-	}
-	st := time.Now()
-	if op.config.Benchmark.MeasuredSystem == "proteus" || op.config.Benchmark.MeasuredSystem == "mysql_plain" {
-		err = op.ds.StoryVoteSimple(1, storyID, vote)
-	} else {
-		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
-	}
-	return time.Since(st), err
+// Comment ...
+type Comment struct {
+	Ops *Operations
 }
 
-// CommentVote issues an up or down vote for the given comment.
-func (op *Operations) CommentVote(vote int) (time.Duration, error) {
-	var commentID int64
-	for commentID == 0 {
-		commentID = op.commentVoteSampler.Sample()
-	}
-
-	var duration time.Duration
-
-	st := time.Now()
-	_, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
+// DoOperation ...
+func (op Comment) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.Comment()
 	if err != nil {
-		return duration, err
+		er(err)
 	}
-
-	//err = op.ds.Insert(
-	//	"votes",
-	//	map[string]interface{}{
-	//		"user_id":    1,
-	//		"story_id":   storyID,
-	//		"comment_id": commentID,
-	//		"vote":       vote,
-	//	})
-	return time.Since(st), err
-}
-
-// Submit a new story to the site.
-func (op *Operations) Submit() (time.Duration, error) {
-	var duration time.Duration
-
-	id := atomic.AddInt64(&op.StoryID, 1)
-
-	description, err := randString(30)
-	if err != nil {
-		return duration, err
-	}
-
-	st := time.Now()
-	err = op.ds.Submit(1, fmt.Sprintf("story %d", id), description, idToShortID(id))
-	return time.Since(st), err
+	return measurements.Write, respTime, time.Now()
 }
 
 // Comment ...
@@ -240,6 +260,36 @@ func (op *Operations) Comment() (time.Duration, error) {
 	return time.Since(st), err
 }
 
+// Submit ...
+type Submit struct {
+	Ops *Operations
+}
+
+// DoOperation ...
+func (op Submit) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.Submit()
+	if err != nil {
+		er(err)
+	}
+	return measurements.Write, respTime, time.Now()
+}
+
+// Submit a new story to the site.
+func (op *Operations) Submit() (time.Duration, error) {
+	var duration time.Duration
+
+	id := atomic.AddInt64(&op.StoryID, 1)
+
+	description, err := randString(30)
+	if err != nil {
+		return duration, err
+	}
+
+	st := time.Now()
+	err = op.ds.Submit(1, fmt.Sprintf("story %d", id), description, idToShortID(id))
+	return time.Since(st), err
+}
+
 // AddUser ...
 func (op *Operations) AddUser() error {
 	userName, err := randString(10)
@@ -248,6 +298,21 @@ func (op *Operations) AddUser() error {
 	}
 	return op.ds.Adduser(userName[:10])
 }
+
+// Recent renders recently submitted stories (https://lobste.rs/recent).
+func (op *Operations) recent() {}
+
+// Comments renders recently submitted comments (https://lobste.rs/recent).
+func (op *Operations) comments() {}
+
+// User renders a user's profile(https://lobste.rs/u/jonhoo).
+func (op *Operations) user(username string) {}
+
+// Login logs in a user.
+func (op *Operations) login() {}
+
+// Logout logs out a user.
+func (op *Operations) logout() {}
 
 // Close ...
 func (op *Operations) Close() {
@@ -421,4 +486,10 @@ var commentsPerStory = []distributions.Distribution{
 		Bin:   70,
 		Count: 1,
 	},
+}
+
+func er(err error) {
+	fmt.Println(err)
+	debug.PrintStack()
+	log.Fatal(err)
 }

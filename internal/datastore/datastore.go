@@ -87,11 +87,7 @@ func (ds Datastore) StoryVoteUpdateCount(userID int, storyID int64, vote int) er
 		return err
 	}
 
-	// Commit the change if all queries ran successfully
 	return tx.Commit()
-
-	// _, err = ds.Db.Exec(query)
-	// return err
 }
 
 // Adduser ...

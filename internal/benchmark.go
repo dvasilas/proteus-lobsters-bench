@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
-	"github.com/dvasilas/proteus-lobsters-bench/internal/perf"
-	"github.com/dvasilas/proteus-lobsters-bench/internal/workload"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/generator"
+	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	log "github.com/sirupsen/logrus"
 )
 
 // Benchmark ...
 type Benchmark struct {
 	config       *config.BenchmarkConfig
-	workload     *workload.Workload
-	measurements *perf.Perf
+	generator    *generator.Generator
+	measurements *measurements.Measurements
 }
 
 // NewBenchmark ...
@@ -51,48 +51,46 @@ func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFli
 		return Benchmark{}, nil
 	}
 
-	workload, err := workload.NewWorkload(&conf)
+	generator, err := generator.NewGenerator(&conf)
 	if err != nil {
 		return Benchmark{}, err
 	}
 
 	return Benchmark{
 		config:       &conf,
-		workload:     workload,
-		measurements: perf.New(),
+		generator:    generator,
+		measurements: measurements.New(),
 	}, nil
 }
 
-// Preload ...
-func (b Benchmark) Preload() error {
-	return b.workload.Preload()
-}
-
 // Run ...
-func (b Benchmark) Run(workloadType workload.Type) error {
+func (b Benchmark) Run() error {
 	var wg sync.WaitGroup
 
 	for i := 0; i < b.config.Benchmark.ThreadCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// measurements, measurementBufferSize, startTime, endTime := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
-			// b.measurements.ReportMeasurements(measurements, measurementBufferSize, startTime, endTime)
-			runtime, opsOffered, durations, deadlockAborts, hist := b.workload.Client(workloadType, b.config.Benchmark.OpCount)
-			b.measurements.ReportMeasurements(runtime, opsOffered, durations, deadlockAborts, hist)
+			clientMeasurements := b.generator.Client()
+			b.measurements.ReportMeasurements(clientMeasurements)
 		}()
 	}
 
 	wg.Wait()
 
-	b.workload.Close()
+	b.generator.Close()
 
 	return nil
 }
 
+// Preload ...
+func (b Benchmark) Preload() error {
+	return b.generator.Preload()
+}
+
 // Test ...
 func (b Benchmark) Test() error {
-	return b.workload.Test()
+	return b.generator.Test()
 }
 
 // PrintMeasurements ...
@@ -107,16 +105,10 @@ func (b Benchmark) PrintMeasurements() {
 	fmt.Printf("Aborted ops: %d\n", metrics.DeadlockAborts)
 	for opType, metrics := range metrics.PerOpMetrics {
 		fmt.Printf("[%s] Operation count: %d\n", opType, metrics.OpCount)
-		fmt.Printf("[%s] Operation count hist: %d\n", opType, metrics.OpCounthist)
 		fmt.Printf("[%s] Throughput: %.5f\n", opType, metrics.Throughput)
-		fmt.Printf("[%s] Throughput hist: %.5f\n", opType, metrics.Throughputhist)
 		fmt.Printf("[%s] p50(ms): %.5f\n", opType, metrics.P50)
-		fmt.Printf("[%s] p50(ms) hist: %.5f\n", opType, metrics.P50hist)
 		fmt.Printf("[%s] p90(ms): %.5f\n", opType, metrics.P90)
-		fmt.Printf("[%s] p90(ms) hist: %.5f\n", opType, metrics.P90hist)
 		fmt.Printf("[%s] p95(ms): %.5f\n", opType, metrics.P95)
-		fmt.Printf("[%s] p95(ms) hist: %.5f\n", opType, metrics.P95hist)
 		fmt.Printf("[%s] p99(ms): %.5f\n", opType, metrics.P99)
-		fmt.Printf("[%s] p99(ms) hist: %.5f\n", opType, metrics.P99hist)
 	}
 }

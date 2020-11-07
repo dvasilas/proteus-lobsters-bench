@@ -2,7 +2,7 @@ tracing = false
 
 [Connection]
 proteusEndpoint = "127.0.0.1:50350"
-DBEndpoint = "127.0.0.1:3307"
+DBEndpoint = "127.0.0.1:3309"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
@@ -10,19 +10,19 @@ poolSize = 256
 poolOverflow = 256
 
 [Benchmark]
-opCount = 1
 runtime = 20
 doWarmup = false
 warmup = 10
 threadCount = 1
-measuredSystem = "proteus"
-# measuredSystem = "mysql_mv"
+# measuredSystem = "proteus"
+measuredSystem = "mysql"
+workloadType = "simple"
 targetLoad = 10
 maxInFlightRead = 1
 maxInFlightWrite = 1
 
 [Operations]
-writeRatio = 0.5
+writeRatio = 0.05
 downVoteRatio = 0.2
 
 [Operations.Homepage]

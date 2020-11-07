@@ -10,13 +10,13 @@ poolSize = 256
 poolOverflow = 256
 
 [Benchmark]
-opCount = 1000000
 runtime = 120
 doWarmup = true
 warmup = 30
 threadCount = 1
 #measuredsystem = "proteus"
-measuredsystem = "mysql_mv"
+measuredsystem = "mysql"
+workloadType = "simple"
 targetLoad = 30
 maxInFlightRead = 4
 maxInFlightWrite = 4

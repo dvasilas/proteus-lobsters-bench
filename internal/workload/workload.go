@@ -1,36 +1,26 @@
 package workload
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"math/rand"
-	"runtime/debug"
-	"strings"
 	"sync"
 
 	"time"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/operations"
-	"github.com/dvasilas/proteus-lobsters-bench/internal/perf"
-	"google.golang.org/grpc/benchmark/stats"
-)
-
-// Type ...
-type Type int
-
-const (
-	// Simple ...
-	Simple Type = iota
-	// Complete ...
-	Complete Type = iota
 )
 
 // Workload ...
 type Workload struct {
-	config       *config.BenchmarkConfig
-	ops          *operations.Operations
-	measurements *perf.Perf
+	config   *config.BenchmarkConfig
+	ops      *operations.Operations
+	workload workload
+}
+
+type workload interface {
+	nextOp() operations.Operation
 }
 
 // NewWorkload ...
@@ -42,294 +32,66 @@ func NewWorkload(conf *config.BenchmarkConfig) (*Workload, error) {
 		return nil, err
 	}
 
+	var w workload
+	switch conf.Benchmark.WorkloadType {
+	case "simple":
+		w = newWorkloadSimple(conf, ops)
+	case "complete":
+		w = newWorkloadComplete(ops)
+	default:
+		return nil, errors.New("unknown workload type")
+	}
+
 	return &Workload{
-		config:       conf,
-		ops:          ops,
-		measurements: perf.New(),
+		ops:      ops,
+		workload: w,
 	}, nil
 }
 
-type measurement struct {
-	respTime time.Duration
-	opType   OpType
-	endTs    time.Time
+// NextOp ...
+func (w *Workload) NextOp() operations.Operation {
+	return w.workload.nextOp()
 }
 
-func doOperationAsync(op Operation, measurementsCh chan measurement, pendingOperations *int64, limitReadCh, limitWriteCh chan struct{}) {
-	switch op.(type) {
-	case Frontpage, Story:
-		defer func() { <-limitReadCh }()
-	case StoryVote, CommentVote, Submit, Comment:
-		defer func() { <-limitWriteCh }()
-	}
+type workloadSimple struct {
+	writeRatio    float64
+	downVoteRatio float64
+	ops           *operations.Operations
+}
 
-	opType, respTime, endTs := op.DoOperation()
-
-	measurementsCh <- measurement{
-		respTime: respTime,
-		opType:   opType,
-		endTs:    endTs,
+func newWorkloadSimple(conf *config.BenchmarkConfig, ops *operations.Operations) workloadSimple {
+	return workloadSimple{
+		writeRatio:    conf.Operations.WriteRatio,
+		downVoteRatio: conf.Operations.DownVoteRatio,
+		ops:           ops,
 	}
 }
 
-func measurementsConsumer(measurementsCh chan measurement, measurementBuf *[]measurement, deadlockAborts *int64, doneCh chan bool, warmupEnd, end time.Time) {
-	for i, t := 0, time.NewTimer(2*time.Second); true; i++ {
-		select {
-		case m, isopen := <-measurementsCh:
-			if !isopen {
-				return
-			}
-			if m.opType == Deadlock {
-				*deadlockAborts++
-			} else {
-				if m.endTs.UnixNano() > warmupEnd.UnixNano() && m.endTs.UnixNano() < end.UnixNano() {
-					*measurementBuf = append(*measurementBuf, m)
-				}
-			}
-			t.Reset(2 * time.Second)
-		case <-t.C:
-			close(doneCh)
-			return
-		}
-	}
-
-}
-
-// Client ...
-func (w Workload) Client(workloadType Type, measurementBufferSize int64) (time.Duration, int64, map[string][]time.Duration, int64, map[string]*stats.Histogram) {
-	target := w.config.Benchmark.TargetLoad
-	interArrival := time.Duration(1e9/float64(target)) * time.Nanosecond
-
-	measurementsCh := make(chan measurement)
-	var pending int64
-	measurementBuff := make([]measurement, 0)
-	doneCh := make(chan bool)
-
-	deadlockAborts := int64(0)
-
-	var totalOpCnt, opCnt int64
-	var op Operation
-	var st, now, next time.Time
-
-	st = time.Now()
-	end := st.Add(time.Duration(w.config.Benchmark.Runtime) * time.Second)
-
-	warmpupEnd := st.Add(time.Duration(w.config.Benchmark.Warmup) * time.Second)
-	warmupShrortCirc := true
-
-	limitReadCh := make(chan struct{}, w.config.Benchmark.MaxInFlightRead)
-	limitWriteCh := make(chan struct{}, w.config.Benchmark.MaxInFlightWrite)
-
-	histogramOpts := stats.HistogramOptions{
-		// up to 500ms
-		NumBuckets:   50000,
-		GrowthFactor: .01,
-	}
-
-	hists := make(map[string]*stats.Histogram)
-	hists["read"] = stats.NewHistogram(histogramOpts)
-	hists["write"] = stats.NewHistogram(histogramOpts)
-
-	go measurementsConsumer(measurementsCh, &measurementBuff, &deadlockAborts, doneCh, warmpupEnd, end)
-
-	nextOp := true
-	next = time.Now()
-
-	for time.Now().UnixNano() < end.UnixNano() {
-		if warmupShrortCirc && time.Now().UnixNano() > warmpupEnd.UnixNano() {
-			warmupShrortCirc = false
-			st = time.Now()
-			opCnt = 0
-		}
-
-		now = time.Now()
-		if next.UnixNano() > now.UnixNano() {
-			if now.UnixNano() > end.UnixNano() {
-				break
-			}
-			continue
-		}
-
-		if nextOp {
-			nextOp = false
-			switch workloadType {
-			case Simple:
-				op = w.NextOpSimple()
-			case Complete:
-				op = w.NextOpComplete()
-			}
-		}
-
-		switch op.(type) {
-		case Frontpage, Story:
-			select {
-			case limitReadCh <- struct{}{}:
-				nextOp = true
-			default:
-				continue
-			}
-		case StoryVote, CommentVote, Submit, Comment:
-			select {
-			case limitWriteCh <- struct{}{}:
-				nextOp = true
-			default:
-				continue
-			}
-		}
-
-		go doOperationAsync(op, measurementsCh, &pending, limitReadCh, limitWriteCh)
-
-		opCnt++
-		totalOpCnt++
-
-		next = next.Add(interArrival)
-	}
-	en := time.Now()
-	runtime := en.Sub(st)
-
-	<-doneCh
-
-	durations := make(map[string][]time.Duration)
-	durations["read"] = make([]time.Duration, 0)
-	durations["write"] = make([]time.Duration, 0)
-
-	for _, m := range measurementBuff {
-		if m.opType == Write {
-			durations["write"] = append(durations["write"], m.respTime)
-		} else {
-			durations["read"] = append(durations["read"], m.respTime)
-			hists["read"].Add(m.respTime.Nanoseconds())
-		}
-	}
-
-	return runtime, opCnt, durations, deadlockAborts, hists
-}
-
-// OpType ..
-type OpType int
-
-const (
-	// Read ...
-	Read OpType = iota
-	// Write ...
-	Write OpType = iota
-	// Done ...
-	Done OpType = iota
-	// Deadlock ...
-	Deadlock OpType = iota
-)
-
-// Operation ...
-type Operation interface {
-	DoOperation() (OpType, time.Duration, time.Time)
-}
-
-// StoryVote ...
-type StoryVote struct {
-	ops  *operations.Operations
-	vote int
-}
-
-// DoOperation ...
-func (op StoryVote) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.StoryVote(op.vote)
-	if err != nil {
-		if strings.Contains(err.Error(), "Deadlock") {
-			return Deadlock, respTime, time.Now()
-		}
-		er(err)
-	}
-	return Write, respTime, time.Now()
-}
-
-// CommentVote ...
-type CommentVote struct {
-	ops  *operations.Operations
-	vote int
-}
-
-// DoOperation ...
-func (op CommentVote) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.CommentVote(op.vote)
-	if err != nil {
-		er(err)
-	}
-	return Write, respTime, time.Now()
-}
-
-// Frontpage ...
-type Frontpage struct {
-	ops *operations.Operations
-}
-
-// DoOperation ...
-func (op Frontpage) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.Frontpage()
-	if err != nil {
-		er(err)
-	}
-	return Read, respTime, time.Now()
-}
-
-// Story ...
-type Story struct {
-	ops *operations.Operations
-}
-
-// DoOperation ...
-func (op Story) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.Story()
-	if err != nil {
-		er(err)
-	}
-	return Read, respTime, time.Now()
-}
-
-// Comment ...
-type Comment struct {
-	ops *operations.Operations
-}
-
-// DoOperation ...
-func (op Comment) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.Comment()
-	if err != nil {
-		er(err)
-	}
-	return Write, respTime, time.Now()
-}
-
-// Submit ...
-type Submit struct {
-	ops *operations.Operations
-}
-
-// DoOperation ...
-func (op Submit) DoOperation() (OpType, time.Duration, time.Time) {
-	respTime, err := op.ops.Submit()
-	if err != nil {
-		er(err)
-	}
-	return Write, respTime, time.Now()
-}
-
-// NextOpSimple ...
-func (w Workload) NextOpSimple() Operation {
+func (w workloadSimple) nextOp() operations.Operation {
 	r := rand.Float64()
 
-	if r < w.config.Operations.WriteRatio {
+	if r < w.writeRatio {
 		vote := rand.Float64()
-		if vote < w.config.Operations.DownVoteRatio {
-			return StoryVote{ops: w.ops, vote: -1}
+		if vote < w.downVoteRatio {
+			return operations.StoryVote{Ops: w.ops, Vote: -1}
 		}
-		return StoryVote{ops: w.ops, vote: 1}
+		return operations.StoryVote{Ops: w.ops, Vote: 1}
 	}
 
-	return Frontpage{ops: w.ops}
+	return operations.Frontpage{Ops: w.ops}
 }
 
-// NextOpComplete ...
-func (w Workload) NextOpComplete() Operation {
+type workloadComplete struct {
+	ops *operations.Operations
+}
+
+func newWorkloadComplete(ops *operations.Operations) workloadComplete {
+	return workloadComplete{
+		ops: ops,
+	}
+}
+
+func (w workloadComplete) nextOp() operations.Operation {
 	for true {
 		seed := rand.Intn(100000)
 		// 	55.842%  GET   /stories/X
@@ -348,10 +110,10 @@ func (w Workload) NextOpComplete() Operation {
 		//   0.003%  POST  /logout
 		if applies(55842, &seed) {
 			// /stories/X
-			return Story{ops: w.ops}
+			return operations.Story{Ops: w.ops}
 		} else if applies(30105, &seed) {
 			// /
-			return Frontpage{ops: w.ops}
+			return operations.Frontpage{Ops: w.ops}
 		} else if applies(6702, &seed) {
 			// /u/X
 			continue
@@ -363,13 +125,13 @@ func (w Workload) NextOpComplete() Operation {
 			continue
 		} else if applies(630, &seed) {
 			// /comments/X/upvote
-			return CommentVote{ops: w.ops, vote: 1}
+			return operations.CommentVote{Ops: w.ops, Vote: 1}
 		} else if applies(475, &seed) {
 			// /stories/X/upvote
-			return StoryVote{ops: w.ops, vote: 1}
+			return operations.StoryVote{Ops: w.ops, Vote: 1}
 		} else if applies(316, &seed) {
 			// /comments
-			return Comment{ops: w.ops}
+			return operations.Comment{Ops: w.ops}
 		} else if applies(87, &seed) {
 			// /login
 			continue
@@ -378,19 +140,19 @@ func (w Workload) NextOpComplete() Operation {
 			continue
 		} else if applies(54, &seed) {
 			// /comments/X/downvote
-			return CommentVote{ops: w.ops, vote: -1}
+			return operations.CommentVote{Ops: w.ops, Vote: -1}
 		} else if applies(53, &seed) {
 			// /stories
-			return Submit{ops: w.ops}
+			return operations.Submit{Ops: w.ops}
 		} else if applies(21, &seed) {
 			// /stories/X/downvote
-			return StoryVote{ops: w.ops, vote: -1}
+			return operations.StoryVote{Ops: w.ops, Vote: -1}
 		} else {
 			// /logout
 			continue
 		}
 	}
-	return Frontpage{}
+	return operations.Frontpage{}
 }
 
 // Preload ...
@@ -510,10 +272,4 @@ func applies(bound int, n *int) bool {
 	f := *n <= bound
 	*n -= bound
 	return f
-}
-
-func er(err error) {
-	fmt.Println(err)
-	debug.PrintStack()
-	log.Fatal(err)
 }
