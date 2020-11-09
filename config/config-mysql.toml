@@ -14,7 +14,6 @@ runtime = 120
 doWarmup = true
 warmup = 30
 threadCount = 1
-#measuredsystem = "proteus"
 measuredsystem = "mysql"
 workloadType = "simple"
 targetLoad = 30

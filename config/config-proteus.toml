@@ -1,0 +1,33 @@
+tracing = false
+
+[Connection]
+proteusEndpoint = "127.0.0.1:50350"
+DBEndpoint = "127.0.0.1:3307"
+database = "proteus_lobsters_db"
+accessKeyID = "root"
+secretAccessKey  = "verySecretPwd"
+poolSize = 256
+poolOverflow = 256
+
+[Benchmark]
+runtime = 120
+doWarmup = true
+warmup = 30
+threadCount = 1
+measuredsystem = "proteus"
+workloadType = "simple"
+targetLoad = 30
+maxInFlightRead = 4
+maxInFlightWrite = 4
+
+[Operations]
+writeRatio = 0.05
+downVoteRatio = 0.1
+
+[Operations.Homepage]
+storiesLimit = 5
+
+[Preload.RecordCount]
+users = 100
+stories = 1000
+comments = 1000
