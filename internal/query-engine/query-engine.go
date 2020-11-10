@@ -36,7 +36,7 @@ func NewProteusQE(endpoint string, poolSize, poolOverflow int, tracing bool) (Pr
 		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
 		if err != nil {
 			time.Sleep(2 * time.Second)
-			fmt.Println("retying connecting to: ", endpoint)
+			fmt.Println("retrying connecting to: ", endpoint)
 		} else {
 			c.Close()
 			break
@@ -56,7 +56,7 @@ func NewProteusQE(endpoint string, poolSize, poolOverflow int, tracing bool) (Pr
 	for err != nil {
 		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
 		time.Sleep(2 * time.Second)
-		fmt.Println("retying a test query", err)
+		fmt.Println("retrying a test query", err)
 	}
 
 	return ProteusQE{

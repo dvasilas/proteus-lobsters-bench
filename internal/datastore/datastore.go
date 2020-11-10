@@ -29,7 +29,7 @@ func NewDatastore(endpoint, datastoreDB, accessKeyID, secretAccessKey string) (D
 		c, err := net.DialTimeout("tcp", endpoint, time.Second)
 		if err != nil {
 			time.Sleep(1 * time.Second)
-			fmt.Println("retying connecting to ", endpoint)
+			fmt.Println("retrying connecting to ", endpoint)
 		} else {
 			c.Close()
 			break

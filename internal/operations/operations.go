@@ -42,7 +42,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	}
 
 	var qe queryengine.QueryEngine
-	if !conf.Benchmark.DoPreload {
+	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
 			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
@@ -316,7 +316,9 @@ func (op *Operations) logout() {}
 
 // Close ...
 func (op *Operations) Close() {
-	op.qe.Close()
+	if op.qe != nil {
+		op.qe.Close()
+	}
 }
 
 func randString(length int) (string, error) {

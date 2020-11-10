@@ -130,14 +130,14 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 }
 
 func doOperationAsync(op operations.Operation, measurementsCh chan measurements.Measurement, limitReadCh, limitWriteCh chan struct{}) {
+	opType, respTime, endTs := op.DoOperation()
+
 	switch op.(type) {
 	case operations.Frontpage, operations.Story:
-		defer func() { <-limitReadCh }()
+		<-limitReadCh
 	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
-		defer func() { <-limitWriteCh }()
+		<-limitWriteCh
 	}
-
-	opType, respTime, endTs := op.DoOperation()
 
 	measurementsCh <- measurements.Measurement{
 		RespTime: respTime,
