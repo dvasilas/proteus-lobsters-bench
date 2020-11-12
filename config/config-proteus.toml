@@ -29,5 +29,16 @@ storiesLimit = 5
 
 [Preload.RecordCount]
 users = 100
-stories = 1000
-comments = 1000
+stories = 10000
+comments = 10000
+
+[GetMetrics]
+[[GetMetrics.QPU]]
+name = "dsdriver"
+endpoint = "127.0.0.1:50150"
+[[GetMetrics.QPU]]
+name = "sum"
+endpoint = "127.0.0.1:50250"
+[[GetMetrics.QPU]]
+name = "join"
+endpoint = "127.0.0.1:50350"

@@ -8,6 +8,7 @@ import (
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/generator"
+	getmetrics "github.com/dvasilas/proteus-lobsters-bench/internal/getMetrics"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	log "github.com/sirupsen/logrus"
 )
@@ -111,4 +112,6 @@ func (b Benchmark) PrintMeasurements() {
 		fmt.Printf("[%s] p95(ms): %.5f\n", opType, metrics.P95)
 		fmt.Printf("[%s] p99(ms): %.5f\n", opType, metrics.P99)
 	}
+
+	getmetrics.GetMetrics(*b.config)
 }

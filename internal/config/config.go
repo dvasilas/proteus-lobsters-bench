@@ -46,6 +46,12 @@ type BenchmarkConfig struct {
 		PoolSize        int
 		PoolOverflow    int
 	}
+	GetMetrics struct {
+		QPU []struct {
+			Name     string
+			Endpoint string
+		}
+	}
 }
 
 // GetConfig ...

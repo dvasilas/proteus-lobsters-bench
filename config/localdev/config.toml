@@ -2,7 +2,7 @@ tracing = false
 
 [Connection]
 proteusEndpoint = "127.0.0.1:50350"
-DBEndpoint = "127.0.0.1:3309"
+DBEndpoint = "127.0.0.1:3307"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
@@ -14,15 +14,15 @@ runtime = 20
 doWarmup = false
 warmup = 10
 threadCount = 1
-# measuredSystem = "proteus"
-measuredSystem = "mysql"
+measuredSystem = "proteus"
+# measuredSystem = "mysql"
 workloadType = "simple"
 targetLoad = 10
 maxInFlightRead = 1
 maxInFlightWrite = 1
 
 [Operations]
-writeRatio = 0.05
+writeRatio = 1.0
 downVoteRatio = 0.2
 
 [Operations.Homepage]
@@ -33,3 +33,14 @@ users = 100
 stories = 1000
 comments = 1000
 votes = 1000
+
+[GetMetrics]
+[[GetMetrics.QPU]]
+name = "dsdriver"
+endpoint = "127.0.0.1:50150"
+[[GetMetrics.QPU]]
+name = "sum"
+endpoint = "127.0.0.1:50250"
+[[GetMetrics.QPU]]
+name = "join"
+endpoint = "127.0.0.1:50250"
