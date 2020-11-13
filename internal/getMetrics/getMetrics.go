@@ -32,6 +32,10 @@ func GetMetrics(conf config.BenchmarkConfig) error {
 		fmt.Printf("[notificationLatency-%s] p90(ms): %.5f\n", q.Name, resp.NotificationLatencyP90)
 		fmt.Printf("[notificationLatency-%s] p95(ms): %.5f\n", q.Name, resp.NotificationLatencyP95)
 		fmt.Printf("[notificationLatency-%s] p99(ms): %.5f\n", q.Name, resp.NotificationLatencyP99)
+		fmt.Printf("[processingLatency-%s] p50(ms): %.5f\n", q.Name, resp.ProcessingLatencyP50)
+		fmt.Printf("[processingLatency-%s] p90(ms): %.5f\n", q.Name, resp.ProcessingLatencyP90)
+		fmt.Printf("[processingLatency-%s] p95(ms): %.5f\n", q.Name, resp.ProcessingLatencyP95)
+		fmt.Printf("[processingLatency-%s] p99(ms): %.5f\n", q.Name, resp.ProcessingLatencyP99)
 
 	}
 
