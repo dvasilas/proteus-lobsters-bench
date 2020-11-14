@@ -45,6 +45,7 @@ func NewWorkload(conf *config.BenchmarkConfig) (*Workload, error) {
 	return &Workload{
 		ops:      ops,
 		workload: w,
+		config:   conf,
 	}, nil
 }
 
