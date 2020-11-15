@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/dvasilas/proteus v0.0.0-20201113201554-375b6ce19637
+	github.com/dvasilas/proteus v0.0.0-20201115213615-7d348564260e
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/btree v1.0.0

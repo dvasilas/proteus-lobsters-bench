@@ -36,7 +36,10 @@ func GetMetrics(conf config.BenchmarkConfig) error {
 		fmt.Printf("[processingLatency-%s] p90(ms): %.5f\n", q.Name, resp.ProcessingLatencyP90)
 		fmt.Printf("[processingLatency-%s] p95(ms): %.5f\n", q.Name, resp.ProcessingLatencyP95)
 		fmt.Printf("[processingLatency-%s] p99(ms): %.5f\n", q.Name, resp.ProcessingLatencyP99)
-
+		fmt.Printf("[freshnessLatency-%s] p50(ms): %.5f\n", q.Name, resp.FreshnessLatencyP50)
+		fmt.Printf("[freshnessLatency-%s] p90(ms): %.5f\n", q.Name, resp.FreshnessLatencyP90)
+		fmt.Printf("[freshnessLatency-%s] p95(ms): %.5f\n", q.Name, resp.FreshnessLatencyP95)
+		fmt.Printf("[freshnessLatency-%s] p99(ms): %.5f\n", q.Name, resp.FreshnessLatencyP99)
 	}
 
 	return nil

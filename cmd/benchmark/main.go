@@ -54,7 +54,6 @@ func main() {
 		if err := bench.Test(); err != nil {
 			log.Fatal(err)
 		}
-
 		return
 	}
 
