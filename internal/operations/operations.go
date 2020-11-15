@@ -16,6 +16,7 @@ import (
 	"github.com/dvasilas/proteus-lobsters-bench/internal/distributions"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	queryengine "github.com/dvasilas/proteus-lobsters-bench/internal/query-engine"
+	"github.com/go-sql-driver/mysql"
 )
 
 // Operations ...
@@ -77,7 +78,7 @@ type StoryVote struct {
 func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.StoryVote(op.Vote)
 	if err != nil {
-		if strings.Contains(err.Error(), "Deadlock") {
+		if strings.Contains(err.Error(), "Deadlock") || strings.Contains(err.Error(), "out of sync") || err == mysql.ErrInvalidConn {
 			return measurements.Deadlock, respTime, time.Now()
 		}
 		er(err)
