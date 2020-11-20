@@ -78,7 +78,7 @@ type StoryVote struct {
 func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.StoryVote(op.Vote)
 	if err != nil {
-		if strings.Contains(err.Error(), "Deadlock") || strings.Contains(err.Error(), "out of sync") || err == mysql.ErrInvalidConn {
+		if strings.Contains(err.Error(), "Deadlock") || strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
 			return measurements.Deadlock, respTime, time.Now()
 		}
 		er(err)

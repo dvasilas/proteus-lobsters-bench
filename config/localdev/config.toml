@@ -22,7 +22,7 @@ maxInFlightRead = 1
 maxInFlightWrite = 1
 
 [Operations]
-writeRatio = 1.0
+writeRatio = 0.5
 downVoteRatio = 0.2
 
 [Operations.Homepage]
@@ -43,4 +43,4 @@ name = "sum"
 endpoint = "127.0.0.1:50250"
 [[GetMetrics.QPU]]
 name = "join"
-endpoint = "127.0.0.1:50250"
+endpoint = "127.0.0.1:50350"
