@@ -47,7 +47,7 @@ func NewProteusQE(endpoint string, poolSize, poolOverflow int, tracing bool) (Pr
 	if err != nil {
 		return ProteusQE{}, err
 	}
-	c, err := proteusclient.NewClient(proteusclient.Host{Name: "127.0.0.1", Port: int(port)}, poolSize, poolOverflow, tracing)
+	c, err := proteusclient.NewClient(proteusclient.Host{Name: strings.Split(endpoint, ":")[0], Port: int(port)}, poolSize, poolOverflow, tracing)
 	if err != nil {
 		return ProteusQE{}, err
 	}

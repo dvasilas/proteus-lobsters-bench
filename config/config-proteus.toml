@@ -1,8 +1,8 @@
 tracing = false
 
 [Connection]
-proteusEndpoint = "127.0.0.1:50350"
-DBEndpoint = "127.0.0.1:3307"
+proteusEndpoint = "join:50350"
+DBEndpoint = "datastore:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
@@ -35,10 +35,10 @@ comments = 1000
 [GetMetrics]
 [[GetMetrics.QPU]]
 name = "dsdriver"
-endpoint = "127.0.0.1:50150"
+endpoint = "dsdriver:50150"
 [[GetMetrics.QPU]]
 name = "sum"
-endpoint = "127.0.0.1:50250"
+endpoint = "sum:50250"
 [[GetMetrics.QPU]]
 name = "join"
-endpoint = "127.0.0.1:50350"
+endpoint = "join:50350"
