@@ -22,8 +22,9 @@ type BenchmarkConfig struct {
 		Homepage struct {
 			StoriesLimit int
 		}
-		WriteRatio    float64
-		DownVoteRatio float64
+		WriteRatio     float64
+		DownVoteRatio  float64
+		VoteTopStories bool
 	}
 	Benchmark struct {
 		DoPreload        bool

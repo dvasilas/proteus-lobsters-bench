@@ -1,12 +1,13 @@
 package operations
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/dvasilas/proteus-lobsters-bench/internal/distributions"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	queryengine "github.com/dvasilas/proteus-lobsters-bench/internal/query-engine"
+	"github.com/dvasilas/proteus/pkg/proteus-go-client/pb"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -28,6 +30,8 @@ type Operations struct {
 	commentVoteSampler  distributions.Sampler
 	commentStorySampler distributions.Sampler
 	StoryID             int64
+	topStories          []int64
+	voteTopStories      bool
 }
 
 // Operation ...
@@ -37,6 +41,7 @@ type Operation interface {
 
 // NewOperations ...
 func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
+	rand.Seed(time.Now().UTC().UnixNano())
 	ds, err := datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
 	if err != nil {
 		return nil, err
@@ -57,7 +62,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		}
 	}
 
-	return &Operations{
+	ops := &Operations{
 		config:              conf,
 		qe:                  qe,
 		ds:                  ds,
@@ -65,7 +70,17 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentVoteSampler:  distributions.NewSampler(votesPerComment),
 		commentStorySampler: distributions.NewSampler(commentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
-	}, nil
+		voteTopStories:      conf.Operations.VoteTopStories,
+	}
+
+	fmt.Println("voteTopStories", ops.voteTopStories)
+	topStories, err := ops.getTopStories()
+	if err != nil {
+		return nil, err
+	}
+	ops.topStories = topStories
+
+	return ops, nil
 }
 
 // StoryVote ...
@@ -91,7 +106,11 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 	var storyID int64
 	var err error
 	for storyID == 0 {
-		storyID = op.storyVoteSampler.Sample()
+		if op.voteTopStories {
+			storyID = op.topStories[rand.Intn(len(op.topStories))]
+		} else {
+			storyID = op.storyVoteSampler.Sample()
+		}
 	}
 	st := time.Now()
 	if op.config.Benchmark.MeasuredSystem == "proteus" || op.config.Benchmark.MeasuredSystem == "mysql_plain" {
@@ -158,6 +177,35 @@ func (op Frontpage) DoOperation() (measurements.OpType, time.Duration, time.Time
 		er(err)
 	}
 	return measurements.Read, respTime, time.Now()
+}
+
+// GetTopStories ...
+func (op *Operations) getTopStories() ([]int64, error) {
+	topStories := make([]int64, op.config.Operations.Homepage.StoriesLimit)
+	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
+		op.config.Operations.Homepage.StoriesLimit)
+
+	resp, err := op.qe.Query(queryStr)
+	if err != nil {
+		return topStories, err
+	}
+
+	// hp := Homepage{}
+	switch op.config.Benchmark.MeasuredSystem {
+	case "proteus":
+		response := resp.(*pb.QueryResp)
+		for i, entry := range response.GetRespRecord() {
+			sID, err := strconv.ParseInt(entry.GetAttributes()["story_id"], 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+			topStories[i] = sID
+		}
+	case "mysql_plain":
+	case "mysql_mv":
+	}
+
+	return topStories, nil
 }
 
 // Frontpage renders the frontpage (https://lobste.rs/).

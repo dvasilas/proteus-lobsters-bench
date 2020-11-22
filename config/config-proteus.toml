@@ -23,6 +23,7 @@ maxInFlightWrite = 4
 [Operations]
 writeRatio = 0.05
 downVoteRatio = 0.1
+voteTopStories = false
 
 [Operations.Homepage]
 storiesLimit = 5
