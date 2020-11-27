@@ -1,4 +1,6 @@
-APP      := proteus
+REPO := 127.0.0.1:5000/lobsters-bench
+TAG := $(shell git log -1 --pretty=%H | cut -c1-8)
+IMG := ${REPO}:${TAG}
 BIN_DIR  := ${CURDIR}/bin
 PKGS     := $(or $(PKG),$(shell env GO111MODULE=on go list ./...))
 TESTPKGS := $(shell env GO111MODULE=on go list -f \
@@ -23,7 +25,6 @@ bench:
 	@echo "Building..."
 	@go build -o ${BIN_DIR}/benchmark cmd/benchmark/main.go
 
-
 .PHONY: fmt
 ## fmt: runs gofmt on all source files
 fmt: ; $(info $(M) running gofmt…)
@@ -33,6 +34,17 @@ fmt: ; $(info $(M) running gofmt…)
 ## test: run tests
 test: fmt ; $(info $(M) running $(NAME:%=% )tests…)
 	@go test $(TESTPKGS)
+
+.PHONY: image-build
+## image-build:
+image-build:
+	docker build -t lobsters-bench .
+
+.PHONY: image-push-registry
+## image-push-registry: Pushes the image to the local registry
+image-push-registry:
+	docker tag lobsters-bench ${IMG}
+	docker push ${IMG}
 
 .PHONY: help
 ## help: Prints this help message
