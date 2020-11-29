@@ -48,6 +48,7 @@ func GetMetrics(conf config.BenchmarkConfig) error {
 		fmt.Printf("[FreshnessVersions-%s] 1: %.5f\n", q.Name, resp.FreshnessVersions1)
 		fmt.Printf("[FreshnessVersions-%s] 2: %.5f\n", q.Name, resp.FreshnessVersions2)
 		fmt.Printf("[FreshnessVersions-%s] 4: %.5f\n", q.Name, resp.FreshnessVersions4)
+		fmt.Printf("[DataTransfer-%s] (kB): %.5f\n", q.Name, resp.KBytesSent)
 	}
 
 	return nil
