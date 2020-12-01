@@ -10,6 +10,7 @@ require (
 	github.com/google/btree v1.0.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/sirupsen/logrus v1.6.0
+	github.com/stretchr/testify v1.5.1
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/grpc v1.31.1
 )

@@ -43,3 +43,57 @@ endpoint = "sum:50250"
 [[GetMetrics.QPU]]
 name = "join"
 endpoint = "join:50350"
+
+[Distributions]
+[[Distributions.VotesPerStory]]
+bin = 0
+count = 995
+[[Distributions.VotesPerStory]]
+bin = 10
+[[Distributions.VotesPerStory]]
+bin = 5000
+count = 5
+
+[[Distributions.VotesPerComment]]
+bin = 0
+count = 741
+[[Distributions.VotesPerComment]]
+bin = 10
+count = 228
+[[Distributions.VotesPerComment]]
+bin = 20
+count = 23
+[[Distributions.VotesPerComment]]
+bin = 30
+count = 5
+[[Distributions.VotesPerComment]]
+bin = 40
+count = 2
+[[Distributions.VotesPerComment]]
+bin = 50
+count = 1
+
+[[Distributions.CommentsPerStory]]
+bin = 0
+count = 836
+[[Distributions.CommentsPerStory]]
+bin = 10
+count = 119
+[[Distributions.CommentsPerStory]]
+bin = 20
+count = 25
+[[Distributions.CommentsPerStory]]
+bin = 30
+count = 10
+[[Distributions.CommentsPerStory]]
+bin = 40
+count = 5
+[[Distributions.CommentsPerStory]]
+bin = 50
+count = 3
+[[Distributions.CommentsPerStory]]
+bin = 60
+count = 1
+[[Distributions.CommentsPerStory]]
+bin = 70
+count = 1

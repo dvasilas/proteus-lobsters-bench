@@ -66,9 +66,9 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		config:              conf,
 		qe:                  qe,
 		ds:                  ds,
-		storyVoteSampler:    distributions.NewSampler(votesPerStory),
-		commentVoteSampler:  distributions.NewSampler(votesPerComment),
-		commentStorySampler: distributions.NewSampler(commentsPerStory),
+		storyVoteSampler:    distributions.NewSampler(conf.Distributions.VotesPerStory),
+		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
+		commentStorySampler: distributions.NewSampler(conf.Distributions.CommentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
 		voteTopStories:      conf.Operations.VoteTopStories,
 	}
@@ -138,31 +138,7 @@ func (op CommentVote) DoOperation() (measurements.OpType, time.Duration, time.Ti
 
 // CommentVote issues an up or down vote for the given comment.
 func (op *Operations) CommentVote(vote int) (time.Duration, error) {
-
 	return 0, errors.New("not implemented")
-
-	// var commentID int64
-	// for commentID == 0 {
-	// 	commentID = op.commentVoteSampler.Sample()
-	// }
-
-	// var duration time.Duration
-
-	// st := time.Now()
-	// _, err := op.ds.Get("comments", "story_id", map[string]interface{}{"id": commentID})
-	// if err != nil {
-	// 	return duration, err
-	// }
-
-	// //err = op.ds.Insert(
-	// //	"votes",
-	// //	map[string]interface{}{
-	// //		"user_id":    1,
-	// //		"story_id":   storyID,
-	// //		"comment_id": commentID,
-	// //		"vote":       vote,
-	// //	})
-	// return time.Since(st), err
 }
 
 // Frontpage ...
@@ -436,107 +412,6 @@ func idToShortID(id int64) string {
 	}
 
 	return string(str)
-}
-
-var votesPerStory = []distributions.Distribution{
-	distributions.Distribution{
-		Bin:   0,
-		Count: 411,
-	},
-	distributions.Distribution{
-		Bin:   10,
-		Count: 403,
-	},
-	distributions.Distribution{
-		Bin:   20,
-		Count: 113,
-	},
-	distributions.Distribution{
-		Bin:   30,
-		Count: 42,
-	},
-	distributions.Distribution{
-		Bin:   40,
-		Count: 17,
-	},
-	distributions.Distribution{
-		Bin:   50,
-		Count: 7,
-	},
-	distributions.Distribution{
-		Bin:   60,
-		Count: 4,
-	},
-	distributions.Distribution{
-		Bin:   70,
-		Count: 2,
-	},
-	distributions.Distribution{
-		Bin:   80,
-		Count: 1,
-	},
-}
-
-var votesPerComment = []distributions.Distribution{
-	distributions.Distribution{
-		Bin:   0,
-		Count: 741,
-	},
-	distributions.Distribution{
-		Bin:   10,
-		Count: 228,
-	},
-	distributions.Distribution{
-		Bin:   20,
-		Count: 23,
-	},
-	distributions.Distribution{
-		Bin:   30,
-		Count: 5,
-	},
-	distributions.Distribution{
-		Bin:   40,
-		Count: 2,
-	},
-	distributions.Distribution{
-		Bin:   50,
-		Count: 1,
-	},
-}
-
-var commentsPerStory = []distributions.Distribution{
-	distributions.Distribution{
-		Bin:   0,
-		Count: 836,
-	},
-	distributions.Distribution{
-		Bin:   10,
-		Count: 119,
-	},
-	distributions.Distribution{
-		Bin:   20,
-		Count: 25,
-	},
-	distributions.Distribution{
-		Bin:   30,
-		Count: 10,
-	},
-	distributions.Distribution{
-		Bin:   40,
-		Count: 5,
-	},
-	distributions.Distribution{
-		Bin:   50,
-		Count: 3,
-	},
-	distributions.Distribution{
-		Bin:   60,
-		Count: 1,
-	},
-	distributions.Distribution{
-		Bin:   70,
-		Count: 1,
-	},
 }
 
 func er(err error) {

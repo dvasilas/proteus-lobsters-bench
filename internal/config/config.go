@@ -53,6 +53,20 @@ type BenchmarkConfig struct {
 			Endpoint string
 		}
 	}
+	Distributions struct {
+		VotesPerStory []struct {
+			Bin   int64
+			Count int64
+		}
+		VotesPerComment []struct {
+			Bin   int64
+			Count int64
+		}
+		CommentsPerStory []struct {
+			Bin   int64
+			Count int64
+		}
+	}
 }
 
 // GetConfig ...

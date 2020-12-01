@@ -7,10 +7,13 @@ import (
 	"github.com/google/btree"
 )
 
-// Distribution ...
-type Distribution struct {
-	Bin   int64
-	Count int64
+// Port of https://github.com/jonhoo/histogram-sampler/ in Golang.
+
+// Sampler ...
+type Sampler struct {
+	bins   *btree.BTree
+	nextID int64
+	end    int64
 }
 
 type treeNode struct {
@@ -23,15 +26,11 @@ func (n treeNode) Less(than btree.Item) bool {
 	return n.Start < than.(treeNode).Start
 }
 
-// Sampler ...
-type Sampler struct {
-	bins   *btree.BTree
-	nextID int64
-	end    int64
-}
-
 // NewSampler ...
-func NewSampler(inDistribution []Distribution) Sampler {
+func NewSampler(inDistribution []struct {
+	Bin   int64
+	Count int64
+}) Sampler {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	s := Sampler{
