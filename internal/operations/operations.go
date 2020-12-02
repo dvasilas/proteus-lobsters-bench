@@ -31,7 +31,7 @@ type Operations struct {
 	commentStorySampler distributions.Sampler
 	StoryID             int64
 	topStories          []int64
-	voteTopStories      bool
+	voteDistribution    config.DistributionType
 }
 
 // Operation ...
@@ -70,15 +70,26 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
 		commentStorySampler: distributions.NewSampler(conf.Distributions.CommentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
-		voteTopStories:      conf.Operations.VoteTopStories,
 	}
 
-	fmt.Println("voteTopStories", ops.voteTopStories)
-	topStories, err := ops.getTopStories()
-	if err != nil {
-		return nil, err
+	switch conf.Operations.DistributionType {
+	case "uniform":
+		ops.voteDistribution = config.Uniform
+	case "histogram":
+		ops.voteDistribution = config.Histogram
+	case "voteTopStories":
+		ops.voteDistribution = config.VoteTopStories
+	default:
+		return nil, errors.New("unexpected distribution type")
 	}
-	ops.topStories = topStories
+
+	if ops.voteDistribution == config.VoteTopStories {
+		topStories, err := ops.getTopStories()
+		if err != nil {
+			return nil, err
+		}
+		ops.topStories = topStories
+	}
 
 	return ops, nil
 }
@@ -106,10 +117,13 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 	var storyID int64
 	var err error
 	for storyID == 0 {
-		if op.voteTopStories {
+		switch op.voteDistribution {
+		case config.VoteTopStories:
 			storyID = op.topStories[rand.Intn(len(op.topStories))]
-		} else {
+		case config.Histogram:
 			storyID = op.storyVoteSampler.Sample()
+		case config.Uniform:
+			storyID = rand.Int63n(op.config.Preload.RecordCount.Stories)
 		}
 	}
 	st := time.Now()

@@ -7,6 +7,18 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// DistributionType ...
+type DistributionType int
+
+const (
+	// Uniform ...
+	Uniform DistributionType = iota
+	// Histogram ...
+	Histogram DistributionType = iota
+	// VoteTopStories ...
+	VoteTopStories DistributionType = iota
+)
+
 // BenchmarkConfig ...
 type BenchmarkConfig struct {
 	Tracing bool
@@ -22,9 +34,9 @@ type BenchmarkConfig struct {
 		Homepage struct {
 			StoriesLimit int
 		}
-		WriteRatio     float64
-		DownVoteRatio  float64
-		VoteTopStories bool
+		WriteRatio       float64
+		DownVoteRatio    float64
+		DistributionType string
 	}
 	Benchmark struct {
 		DoPreload        bool
