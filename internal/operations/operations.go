@@ -104,10 +104,12 @@ type StoryVote struct {
 func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.StoryVote(op.Vote)
 	if err != nil {
-		if strings.Contains(err.Error(), "Deadlock") || strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
+		if strings.Contains(err.Error(), "Deadlock")  {
+			return measurements.Deadlock, respTime, time.Now()
+		} else if strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
+			// er(err)
 			return measurements.Deadlock, respTime, time.Now()
 		}
-		er(err)
 	}
 	return measurements.Write, respTime, time.Now()
 }
@@ -164,7 +166,10 @@ type Frontpage struct {
 func (op Frontpage) DoOperation() (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Frontpage()
 	if err != nil {
-		er(err)
+		if strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
+			// er(err)
+			return measurements.Deadlock, respTime, time.Now()
+		}
 	}
 	return measurements.Read, respTime, time.Now()
 }
