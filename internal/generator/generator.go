@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"fmt"
+	"sync/atomic"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
@@ -57,6 +59,7 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 
 	limitReadCh := make(chan struct{}, g.config.Benchmark.MaxInFlightRead)
 	limitWriteCh := make(chan struct{}, g.config.Benchmark.MaxInFlightWrite)
+	var inFlightR, maxInFlightR int64
 
 	histograms := make(map[string]*stats.Histogram)
 	histograms["read"] = measurements.NewHistogram()
@@ -70,7 +73,7 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 	}()
 
 	warmupShortCirc := true
-	nextOp := true
+	//nextOp := true
 	next = time.Now()
 
 	for time.Now().UnixNano() < end.UnixNano() {
@@ -88,29 +91,35 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 			continue
 		}
 
-		if nextOp {
-			nextOp = false
-			op = g.workload.NextOp()
-		}
+
+		op = g.workload.NextOp()
+	//	if nextOp {
+	//		nextOp = false
+	//		op = g.workload.NextOp()
+	//	}
 
 		switch op.(type) {
-		case operations.Frontpage, operations.Story:
-			select {
-			case limitReadCh <- struct{}{}:
-				nextOp = true
-			default:
-				continue
-			}
-		case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
-			select {
-			case limitWriteCh <- struct{}{}:
-				nextOp = true
-			default:
-				continue
-			}
+			case operations.Frontpage, operations.Story:
+				val := atomic.AddInt64(&inFlightR, 1)
+				if val > maxInFlightR {
+					maxInFlightR = val
+				}
+//		select {
+	//		case limitReadCh <- struct{}{}:
+	//			nextOp = true
+	//		default:
+	//			continue
+	//		}
+	//	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
+	//		select {
+	//		case limitWriteCh <- struct{}{}:
+	//			nextOp = true
+	//		default:
+	//			continue
+	//		}
 		}
 
-		go doOperationAsync(op, measurementsCh, limitReadCh, limitWriteCh)
+		go doOperationAsync(op, measurementsCh, limitReadCh, limitWriteCh, &inFlightR)
 
 		opCnt++
 
@@ -121,6 +130,8 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 
 	wg.Wait()
 
+	fmt.Println("max in flight: ", maxInFlightR)
+
 	return measurements.ClientMeasurements{
 		Runtime:        runtime,
 		OpsOffered:     opCnt,
@@ -129,14 +140,15 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 	}
 }
 
-func doOperationAsync(op operations.Operation, measurementsCh chan measurements.Measurement, limitReadCh, limitWriteCh chan struct{}) {
+func doOperationAsync(op operations.Operation, measurementsCh chan measurements.Measurement, limitReadCh, limitWriteCh chan struct{}, inFlightR *int64) {
 	opType, respTime, endTs := op.DoOperation()
 
 	switch op.(type) {
 	case operations.Frontpage, operations.Story:
-		<-limitReadCh
-	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
-		<-limitWriteCh
+//		<-limitReadCh
+		atomic.AddInt64(inFlightR, -1)
+//	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
+//		<-limitWriteCh
 	}
 
 	measurementsCh <- measurements.Measurement{
