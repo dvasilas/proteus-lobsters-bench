@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/BurntSushi/toml"
 )
@@ -98,18 +99,46 @@ func readConfigFile(configFile string, conf *BenchmarkConfig) error {
 }
 
 // Print ...
-func (c *BenchmarkConfig) Print() {
-	fmt.Printf("Target system: %s\n", c.Benchmark.MeasuredSystem)
-	fmt.Printf("Benchmark duration(s): %d\n", c.Benchmark.Runtime)
-	fmt.Printf("Warmup(s): %d\n", c.Benchmark.Warmup)
-	fmt.Printf("Benchmark threads: %d\n", c.Benchmark.ThreadCount)
-	fmt.Printf("Target load: %d\n", c.Benchmark.TargetLoad*int64(c.Benchmark.ThreadCount))
-	fmt.Printf("Max in flight read: %d\n", c.Benchmark.MaxInFlightRead)
-	fmt.Printf("Max in flight write: %d\n", c.Benchmark.MaxInFlightWrite)
-	fmt.Printf("Conn pool size: %d\n", c.Connection.PoolSize+c.Connection.PoolOverflow)
-	fmt.Printf("[workload] Q/W ratio(%%): %f\n", 1-c.Operations.WriteRatio)
-	fmt.Printf("[workload] U/D vote ratio(%%): %f\n", 1-c.Operations.DownVoteRatio)
-	fmt.Printf("[preload] Users: %d\n", c.Preload.RecordCount.Users)
-	fmt.Printf("[preload] Stories: %d\n", c.Preload.RecordCount.Stories)
-	fmt.Printf("[preload] Comments: %d\n", c.Preload.RecordCount.Comments)
+func (c *BenchmarkConfig) Print(f *os.File) error {
+	if _, err := fmt.Fprintf(f, "Target system: %s\n", c.Benchmark.MeasuredSystem); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Benchmark duration(s): %d\n", c.Benchmark.Runtime); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Warmup(s): %d\n", c.Benchmark.Warmup); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Benchmark threads: %d\n", c.Benchmark.ThreadCount); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Target load: %d\n", c.Benchmark.TargetLoad*int64(c.Benchmark.ThreadCount)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Max in flight read: %d\n", c.Benchmark.MaxInFlightRead); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Max in flight write: %d\n", c.Benchmark.MaxInFlightWrite); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "Conn pool size: %d\n", c.Connection.PoolSize+c.Connection.PoolOverflow); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "[workload] Q/W ratio(%%): %f\n", 1-c.Operations.WriteRatio); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "[workload] U/D vote ratio(%%): %f\n", 1-c.Operations.DownVoteRatio); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "[preload] Users: %d\n", c.Preload.RecordCount.Users); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "[preload] Stories: %d\n", c.Preload.RecordCount.Stories); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(f, "[preload] Comments: %d\n", c.Preload.RecordCount.Comments); err != nil {
+		return err
+	}
+
+	return nil
 }

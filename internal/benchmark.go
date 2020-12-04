@@ -3,6 +3,7 @@ package benchmark
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
@@ -21,7 +22,7 @@ type Benchmark struct {
 }
 
 // NewBenchmark ...
-func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFlightR, maxInFlightW int64, dryRun bool) (Benchmark, error) {
+func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFlightR, maxInFlightW int64, dryRun bool, fM *os.File) (Benchmark, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	conf, err := config.GetConfig(configFile)
@@ -48,7 +49,9 @@ func NewBenchmark(configFile string, preload bool, threadCnt int, load, maxInFli
 	log.WithFields(log.Fields{"conf": conf}).Info("configuration")
 
 	if dryRun {
-		conf.Print()
+		if err := conf.Print(fM); err != nil {
+			return Benchmark{}, err
+		}
 		return Benchmark{}, nil
 	}
 
@@ -95,23 +98,50 @@ func (b Benchmark) Test() error {
 }
 
 // PrintMeasurements ...
-func (b Benchmark) PrintMeasurements() {
-	b.config.Print()
-
-	metrics := b.measurements.CalculateMetrics()
-
-	fmt.Printf("Runtime(s): %.3f\n", metrics.Runtime.Seconds())
-	fmt.Printf("Load offered: %.3f\n", metrics.LoadOffered)
-	fmt.Printf("Total throughput: %.5f\n", metrics.Throughput)
-	fmt.Printf("Aborted ops: %d\n", metrics.DeadlockAborts)
-	for opType, metrics := range metrics.PerOpMetrics {
-		fmt.Printf("[%s] Operation count: %d\n", opType, metrics.OpCount)
-		fmt.Printf("[%s] Throughput: %.5f\n", opType, metrics.Throughput)
-		fmt.Printf("[%s] p50(ms): %.5f\n", opType, metrics.P50)
-		fmt.Printf("[%s] p90(ms): %.5f\n", opType, metrics.P90)
-		fmt.Printf("[%s] p95(ms): %.5f\n", opType, metrics.P95)
-		fmt.Printf("[%s] p99(ms): %.5f\n", opType, metrics.P99)
+func (b Benchmark) PrintMeasurements(fM, fTRead, fTWrite *os.File) error {
+	if err := b.config.Print(fM); err != nil {
+		return err
 	}
 
-	getmetrics.GetMetrics(*b.config)
+	metrics, err := b.measurements.CalculateMetrics(fTRead, fTWrite)
+	if err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintf(fM, "Runtime(s): %.3f\n", metrics.Runtime.Seconds()); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(fM, "Load offered: %.3f\n", metrics.LoadOffered); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(fM, "Total throughput: %.5f\n", metrics.Throughput); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(fM, "Aborted ops: %d\n", metrics.DeadlockAborts); err != nil {
+		return err
+	}
+	for opType, metrics := range metrics.PerOpMetrics {
+		if _, err := fmt.Fprintf(fM, "[%s] Operation count: %d\n", opType, metrics.OpCount); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[%s] Throughput: %.5f\n", opType, metrics.Throughput); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[%s] p50(ms): %.5f\n", opType, metrics.P50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[%s] p90(ms): %.5f\n", opType, metrics.P90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[%s] p95(ms): %.5f\n", opType, metrics.P95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[%s] p99(ms): %.5f\n", opType, metrics.P99); err != nil {
+			return err
+		}
+	}
+
+	getmetrics.GetMetrics(*b.config, fM)
+
+	return nil
 }

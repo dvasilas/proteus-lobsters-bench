@@ -2,6 +2,7 @@ package getmetrics
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // GetMetrics ...
-func GetMetrics(conf config.BenchmarkConfig) error {
+func GetMetrics(conf config.BenchmarkConfig, fM *os.File) error {
 	for _, q := range conf.GetMetrics.QPU {
 		endpoint := strings.Split(q.Endpoint, ":")
 		port, err := strconv.ParseInt(endpoint[1], 10, 64)
@@ -28,31 +29,81 @@ func GetMetrics(conf config.BenchmarkConfig) error {
 			return err
 
 		}
-		fmt.Printf("[notificationLatency-%s] p50(ms): %.5f\n", q.Name, resp.NotificationLatencyP50)
-		fmt.Printf("[notificationLatency-%s] p90(ms): %.5f\n", q.Name, resp.NotificationLatencyP90)
-		fmt.Printf("[notificationLatency-%s] p95(ms): %.5f\n", q.Name, resp.NotificationLatencyP95)
-		fmt.Printf("[notificationLatency-%s] p99(ms): %.5f\n", q.Name, resp.NotificationLatencyP99)
-		fmt.Printf("[processingLatency-%s] p50(ms): %.5f\n", q.Name, resp.ProcessingLatencyP50)
-		fmt.Printf("[processingLatency-%s] p90(ms): %.5f\n", q.Name, resp.ProcessingLatencyP90)
-		fmt.Printf("[processingLatency-%s] p95(ms): %.5f\n", q.Name, resp.ProcessingLatencyP95)
-		fmt.Printf("[processingLatency-%s] p99(ms): %.5f\n", q.Name, resp.ProcessingLatencyP99)
-		fmt.Printf("[stateUpdateLatency-%s] p50(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP50)
-		fmt.Printf("[stateUpdateLatency-%s] p90(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP90)
-		fmt.Printf("[stateUpdateLatency-%s] p95(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP95)
-		fmt.Printf("[stateUpdateLatency-%s] p99(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP99)
-		fmt.Printf("[freshnessLatency-%s] p50(ms): %.5f\n", q.Name, resp.FreshnessLatencyP50)
-		fmt.Printf("[freshnessLatency-%s] p90(ms): %.5f\n", q.Name, resp.FreshnessLatencyP90)
-		fmt.Printf("[freshnessLatency-%s] p95(ms): %.5f\n", q.Name, resp.FreshnessLatencyP95)
-		fmt.Printf("[freshnessLatency-%s] p99(ms): %.5f\n", q.Name, resp.FreshnessLatencyP99)
-		fmt.Printf("[FreshnessVersions-%s] 0: %.5f\n", q.Name, resp.FreshnessVersions0)
-		fmt.Printf("[FreshnessVersions-%s] 1: %.5f\n", q.Name, resp.FreshnessVersions1)
-		fmt.Printf("[FreshnessVersions-%s] 2: %.5f\n", q.Name, resp.FreshnessVersions2)
-		fmt.Printf("[FreshnessVersions-%s] 4: %.5f\n", q.Name, resp.FreshnessVersions4)
-		fmt.Printf("[DataTransfer-%s] (kB): %.5f\n", q.Name, resp.KBytesSent)
-		fmt.Printf("[responseTime-%s] p50(ms): %.5f\n", q.Name, resp.ResponseTimeP50)
-		fmt.Printf("[responseTime-%s] p90(ms): %.5f\n", q.Name, resp.ResponseTimeP90)
-		fmt.Printf("[responseTime-%s] p95(ms): %.5f\n", q.Name, resp.ResponseTimeP95)
-		fmt.Printf("[responseTime-%s] p99(ms): %.5f\n", q.Name, resp.ResponseTimeP99)
+		if _, err := fmt.Fprintf(fM, "[notificationLatency-%s] p50(ms): %.5f\n", q.Name, resp.NotificationLatencyP50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[notificationLatency-%s] p90(ms): %.5f\n", q.Name, resp.NotificationLatencyP90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[notificationLatency-%s] p95(ms): %.5f\n", q.Name, resp.NotificationLatencyP95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[notificationLatency-%s] p99(ms): %.5f\n", q.Name, resp.NotificationLatencyP99); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[processingLatency-%s] p50(ms): %.5f\n", q.Name, resp.ProcessingLatencyP50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[processingLatency-%s] p90(ms): %.5f\n", q.Name, resp.ProcessingLatencyP90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[processingLatency-%s] p95(ms): %.5f\n", q.Name, resp.ProcessingLatencyP95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[processingLatency-%s] p99(ms): %.5f\n", q.Name, resp.ProcessingLatencyP99); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[stateUpdateLatency-%s] p50(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[stateUpdateLatency-%s] p90(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[stateUpdateLatency-%s] p95(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[stateUpdateLatency-%s] p99(ms): %.5f\n", q.Name, resp.StateUpdateLatencyP99); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[freshnessLatency-%s] p50(ms): %.5f\n", q.Name, resp.FreshnessLatencyP50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[freshnessLatency-%s] p90(ms): %.5f\n", q.Name, resp.FreshnessLatencyP90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[freshnessLatency-%s] p95(ms): %.5f\n", q.Name, resp.FreshnessLatencyP95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[freshnessLatency-%s] p99(ms): %.5f\n", q.Name, resp.FreshnessLatencyP99); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[FreshnessVersions-%s] 0: %.5f\n", q.Name, resp.FreshnessVersions0); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[FreshnessVersions-%s] 1: %.5f\n", q.Name, resp.FreshnessVersions1); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[FreshnessVersions-%s] 2: %.5f\n", q.Name, resp.FreshnessVersions2); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[FreshnessVersions-%s] 4: %.5f\n", q.Name, resp.FreshnessVersions4); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[DataTransfer-%s] (kB): %.5f\n", q.Name, resp.KBytesSent); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[responseTime-%s] p50(ms): %.5f\n", q.Name, resp.ResponseTimeP50); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[responseTime-%s] p90(ms): %.5f\n", q.Name, resp.ResponseTimeP90); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[responseTime-%s] p95(ms): %.5f\n", q.Name, resp.ResponseTimeP95); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(fM, "[responseTime-%s] p99(ms): %.5f\n", q.Name, resp.ResponseTimeP99); err != nil {
+			return err
+		}
 	}
 
 	return nil

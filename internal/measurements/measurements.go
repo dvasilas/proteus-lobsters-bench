@@ -1,6 +1,8 @@
 package measurements
 
 import (
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -89,7 +91,7 @@ func (p *Measurements) ReportMeasurements(m ClientMeasurements) {
 }
 
 // CalculateMetrics ...
-func (p *Measurements) CalculateMetrics() Metrics {
+func (p *Measurements) CalculateMetrics(fTRead, fTWrite *os.File) (Metrics, error) {
 	var aggOpsOffered int64
 	var aggDeadlockAborts int64
 	var aggRuntime time.Duration
@@ -97,6 +99,10 @@ func (p *Measurements) CalculateMetrics() Metrics {
 	aggHistograms := make(map[string]*stats.Histogram)
 	aggHistograms["read"] = stats.NewHistogram(histogramOpts)
 	aggHistograms["write"] = stats.NewHistogram(histogramOpts)
+
+	traceF := make(map[string]*os.File)
+	traceF["read"] = fTRead
+	traceF["write"] = fTWrite
 
 	for _, c := range p.clientMeasurements {
 		aggRuntime += c.Runtime
@@ -128,6 +134,13 @@ func (p *Measurements) CalculateMetrics() Metrics {
 			P99:        durationToMillis(time.Duration(pepcentile(.99, hist))),
 		}
 
+		if _, err := fmt.Fprintf(traceF[opType], "%.5f\n", aggRuntime.Seconds()); err != nil {
+			return m, err
+		}
+		if _, err := fmt.Fprintf(traceF[opType], "%d\n", hist.Count); err != nil {
+			return m, err
+		}
+
 		m.PerOpMetrics[opType] = opMetrics
 	}
 
@@ -135,7 +148,7 @@ func (p *Measurements) CalculateMetrics() Metrics {
 
 	m.DeadlockAborts = aggDeadlockAborts
 
-	return m
+	return m, nil
 }
 
 func pepcentile(percentile float64, h *stats.Histogram) int64 {
