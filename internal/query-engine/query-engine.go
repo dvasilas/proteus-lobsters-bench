@@ -14,14 +14,15 @@ import (
 
 // QueryEngine ...
 type QueryEngine interface {
-	Query(query string) (interface{}, error)
+	Query(query string, opID int64) (interface{}, error)
 	StoryVote(storyID int64, vote int) error
 	Close()
 }
 
 // ProteusQE ...
 type ProteusQE struct {
-	proteusClient *proteusclient.Client
+	serverCount   int
+	proteusClient []*proteusclient.Client
 }
 
 // MysqlQE ...
@@ -32,45 +33,54 @@ type MysqlQE struct {
 // --------------------- Proteus query engine --------------------
 
 // NewProteusQE ...
-func NewProteusQE(endpoint string, poolSize, poolOverflow int, tracing bool) (ProteusQE, error) {
-	for {
-		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
-		if err != nil {
-			time.Sleep(2 * time.Second)
-			fmt.Println("retrying connecting to: ", endpoint)
-		} else {
-			c.Close()
-			break
-		}
-	}
+func NewProteusQE(endpoint string, poolSize, poolOverflow, serverCount int, tracing bool) (ProteusQE, error) {
+	clients := make([]*proteusclient.Client, serverCount)
 
-	port, err := strconv.ParseInt(strings.Split(endpoint, ":")[1], 10, 64)
-	if err != nil {
-		return ProteusQE{}, err
-	}
-	c, err := proteusclient.NewClient(proteusclient.Host{Name: strings.Split(endpoint, ":")[0], Port: int(port)}, poolSize, poolOverflow, tracing)
-	if err != nil {
-		return ProteusQE{}, err
-	}
-
-	err = errors.New("not tried yet")
-	for err != nil {
-		_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
+	for i := 0; i < serverCount; i++ {
+		port, err := strconv.ParseInt(strings.Split(endpoint, ":")[1], 10, 64)
 		if err != nil {
 			return ProteusQE{}, err
 		}
-		time.Sleep(2 * time.Second)
-		fmt.Println("retrying a test query", err)
+
+		endpoint := fmt.Sprintf("%s:%s", strings.Split(endpoint, ":")[0], strconv.FormatInt(port+int64(i), 10))
+		for {
+			c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
+			if err != nil {
+				time.Sleep(2 * time.Second)
+				fmt.Println("retrying connecting to: ", endpoint)
+			} else {
+				c.Close()
+				break
+			}
+		}
+
+		c, err := proteusclient.NewClient(proteusclient.Host{Name: strings.Split(endpoint, ":")[0], Port: int(port) + i}, poolSize, poolOverflow, tracing)
+		if err != nil {
+			return ProteusQE{}, err
+		}
+
+		err = errors.New("not tried yet")
+		for err != nil {
+			_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
+			if err != nil {
+				return ProteusQE{}, err
+			}
+			time.Sleep(2 * time.Second)
+			fmt.Println("retrying a test query", err)
+		}
+
+		clients[i] = c
 	}
 
 	return ProteusQE{
-		proteusClient: c,
+		proteusClient: clients,
+		serverCount:   serverCount,
 	}, nil
 }
 
 // Query ...
-func (qe ProteusQE) Query(query string) (resp interface{}, err error) {
-	resp, err = qe.proteusClient.Query(query)
+func (qe ProteusQE) Query(query string, opID int64) (resp interface{}, err error) {
+	resp, err = qe.proteusClient[int(opID%int64(qe.serverCount))].Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +94,9 @@ func (qe ProteusQE) StoryVote(storyID int64, vote int) error {
 
 // Close ...
 func (qe ProteusQE) Close() {
-	qe.proteusClient.Close()
+	for _, c := range qe.proteusClient {
+		c.Close()
+	}
 }
 
 // ------------------ MySQL query engine ---------------
@@ -127,7 +139,7 @@ func NewMysqlQE(endpoint string, poolSize, poolOverflow int, tracing bool) (Mysq
 }
 
 // Query ...
-func (qe MysqlQE) Query(query string) (interface{}, error) {
+func (qe MysqlQE) Query(query string, opID int64) (interface{}, error) {
 	return qe.proteusClient.LobstersFrontpage()
 }
 
@@ -157,7 +169,7 @@ func NewBaselineQE(ds *datastore.Datastore) BaselineQE {
 }
 
 // Query ...
-func (qe BaselineQE) Query(query string) (interface{}, error) {
+func (qe BaselineQE) Query(query string, opID int64) (interface{}, error) {
 	rows, err := qe.ds.Db.Query(query)
 	if err != nil {
 		return nil, err

@@ -238,7 +238,7 @@ func (w Workload) Test() error {
 	}
 
 	fmt.Println("GetHomepage ...")
-	_, err := w.ops.Frontpage()
+	_, err := w.ops.Frontpage(0)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (w Workload) Test() error {
 	time.Sleep(2 * time.Second)
 
 	fmt.Println("Get Homepage ...")
-	_, err = w.ops.Frontpage()
+	_, err = w.ops.Frontpage(0)
 	if err != nil {
 		return err
 	}

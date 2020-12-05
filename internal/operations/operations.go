@@ -38,7 +38,7 @@ type Operations struct {
 
 // Operation ...
 type Operation interface {
-	DoOperation() (measurements.OpType, time.Duration, time.Time)
+	DoOperation(int64) (measurements.OpType, time.Duration, time.Time)
 }
 
 // NewOperations ...
@@ -55,7 +55,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
-			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.ServerCount, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
@@ -115,7 +115,7 @@ type StoryVote struct {
 }
 
 // DoOperation ...
-func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+func (op StoryVote) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.StoryVote(op.Vote)
 	if err != nil {
 		if strings.Contains(err.Error(), "Deadlock") {
@@ -197,7 +197,7 @@ type CommentVote struct {
 }
 
 // DoOperation ...
-func (op CommentVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+func (op CommentVote) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.CommentVote(op.Vote)
 	if err != nil {
 		er(err)
@@ -216,8 +216,8 @@ type Frontpage struct {
 }
 
 // DoOperation ...
-func (op Frontpage) DoOperation() (measurements.OpType, time.Duration, time.Time) {
-	respTime, err := op.Ops.Frontpage()
+func (op Frontpage) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
+	respTime, err := op.Ops.Frontpage(opID)
 	if err != nil {
 		if strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
 			// er(err)
@@ -233,7 +233,7 @@ func (op *Operations) getTopStories() ([]int64, error) {
 	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
 		op.config.Operations.Homepage.StoriesLimit)
 
-	resp, err := op.qe.Query(queryStr)
+	resp, err := op.qe.Query(queryStr, 0)
 	if err != nil {
 		return topStories, err
 	}
@@ -255,7 +255,7 @@ func (op *Operations) getTopStories() ([]int64, error) {
 }
 
 // Frontpage renders the frontpage (https://lobste.rs/).
-func (op *Operations) Frontpage() (time.Duration, error) {
+func (op *Operations) Frontpage(opID int64) (time.Duration, error) {
 	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
 		op.config.Operations.Homepage.StoriesLimit)
 
@@ -266,6 +266,7 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 		work := &JobFrontPage{
 			ops:      op,
 			queryStr: queryStr,
+			opID:     opID,
 			result:   &jobFrontPageResult{},
 			done:     make(chan bool),
 		}
@@ -276,7 +277,7 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 
 		err = work.result.err
 	} else {
-		_, err = op.qe.Query(queryStr)
+		_, err = op.qe.Query(queryStr, opID)
 	}
 	duration = time.Since(st)
 
@@ -301,6 +302,7 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 type JobFrontPage struct {
 	ops      *Operations
 	queryStr string
+	opID     int64
 	result   *jobFrontPageResult
 	done     chan bool
 }
@@ -312,7 +314,7 @@ func (j *JobFrontPage) Do() {
 }
 
 func (j *JobFrontPage) do() {
-	resp, err := j.ops.qe.Query(j.queryStr)
+	resp, err := j.ops.qe.Query(j.queryStr, j.opID)
 
 	j.result.resp = resp
 	j.result.err = err
@@ -329,7 +331,7 @@ type Story struct {
 }
 
 // DoOperation ...
-func (op Story) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+func (op Story) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Story()
 	if err != nil {
 		er(err)
@@ -349,7 +351,7 @@ func (op *Operations) Story() (time.Duration, error) {
 
 	var duration time.Duration
 	st := time.Now()
-	_, err := op.qe.Query(queryStr)
+	_, err := op.qe.Query(queryStr, 0)
 	duration = time.Since(st)
 	if err != nil {
 		return duration, err
@@ -370,7 +372,7 @@ type Comment struct {
 }
 
 // DoOperation ...
-func (op Comment) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+func (op Comment) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Comment()
 	if err != nil {
 		er(err)
@@ -402,7 +404,7 @@ type Submit struct {
 }
 
 // DoOperation ...
-func (op Submit) DoOperation() (measurements.OpType, time.Duration, time.Time) {
+func (op Submit) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Submit()
 	if err != nil {
 		er(err)
