@@ -42,21 +42,27 @@ type Operation interface {
 // NewOperations ...
 func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
-	ds, err := datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
-	if err != nil {
-		return nil, err
-	}
-
+	var ds datastore.Datastore
 	var qe queryengine.QueryEngine
+	var err error
+
 	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
+			ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
+			if err != nil {
+				return nil, err
+			}
+
 			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
 		case "mysql":
-			qe = queryengine.NewMysqlQE(&ds)
+			qe, err = queryengine.NewMysqlQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, errors.New("invalid 'system' argument")
 		}
@@ -104,7 +110,7 @@ type StoryVote struct {
 func (op StoryVote) DoOperation() (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.StoryVote(op.Vote)
 	if err != nil {
-		if strings.Contains(err.Error(), "Deadlock")  {
+		if strings.Contains(err.Error(), "Deadlock") {
 			return measurements.Deadlock, respTime, time.Now()
 		} else if strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
 			// er(err)
@@ -129,10 +135,10 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 		}
 	}
 	st := time.Now()
-	if op.config.Benchmark.MeasuredSystem == "proteus" || op.config.Benchmark.MeasuredSystem == "mysql_plain" {
+	if op.config.Benchmark.MeasuredSystem == "proteus" {
 		err = op.ds.StoryVoteSimple(1, storyID, vote)
 	} else {
-		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
+		err = op.qe.StoryVote(storyID, vote)
 	}
 	return time.Since(st), err
 }
