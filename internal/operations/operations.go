@@ -17,6 +17,7 @@ import (
 	"github.com/dvasilas/proteus-lobsters-bench/internal/distributions"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
 	queryengine "github.com/dvasilas/proteus-lobsters-bench/internal/query-engine"
+	workerpool "github.com/dvasilas/proteus-lobsters-bench/internal/worker_pool"
 	"github.com/dvasilas/proteus/pkg/proteus-go-client/pb"
 	"github.com/go-sql-driver/mysql"
 )
@@ -32,6 +33,7 @@ type Operations struct {
 	StoryID             int64
 	topStories          []int64
 	voteDistribution    config.DistributionType
+	dispatcher          *workerpool.Dispatcher
 }
 
 // Operation ...
@@ -64,6 +66,8 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 			}
 		case "baseline":
 			qe = queryengine.NewBaselineQE(&ds)
+		case "baseline_workers":
+			qe = queryengine.NewBaselineQE(&ds)
 		default:
 			return nil, errors.New("invalid 'system' argument")
 		}
@@ -77,7 +81,10 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
 		commentStorySampler: distributions.NewSampler(conf.Distributions.CommentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
+		dispatcher:          workerpool.NewDispatcher(8, 10000),
 	}
+
+	ops.dispatcher.Run()
 
 	switch conf.Operations.DistributionType {
 	case "uniform":
@@ -142,8 +149,45 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 		err = op.qe.StoryVote(storyID, vote)
 	} else if op.config.Benchmark.MeasuredSystem == "baseline" {
 		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
+	} else if op.config.Benchmark.MeasuredSystem == "baseline_workers" {
+		work := &JobStoryVote{
+			ops:     op,
+			storyID: storyID,
+			vote:    vote,
+			result:  &jobStoryVoteResult{},
+			done:    make(chan bool),
+		}
+
+		op.dispatcher.JobQueue <- work
+
+		<-work.done
+
+		err = work.result.err
 	}
 	return time.Since(st), err
+}
+
+// JobStoryVote ...
+type JobStoryVote struct {
+	ops     *Operations
+	result  *jobStoryVoteResult
+	storyID int64
+	vote    int
+	done    chan bool
+}
+
+// Do ...
+func (j *JobStoryVote) Do() {
+	j.do()
+	j.done <- true
+}
+
+func (j *JobStoryVote) do() {
+	j.result.err = j.ops.ds.StoryVoteUpdateCount(1, j.storyID, j.vote)
+}
+
+type jobStoryVoteResult struct {
+	err error
 }
 
 // CommentVote ...
@@ -216,9 +260,26 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 		op.config.Operations.Homepage.StoriesLimit)
 
 	var duration time.Duration
+	var err error
 	st := time.Now()
-	_, err := op.qe.Query(queryStr)
+	if op.config.Benchmark.MeasuredSystem == "baseline_workers" {
+		work := &JobFrontPage{
+			ops:      op,
+			queryStr: queryStr,
+			result:   &jobFrontPageResult{},
+			done:     make(chan bool),
+		}
+
+		op.dispatcher.JobQueue <- work
+
+		<-work.done
+
+		err = work.result.err
+	} else {
+		_, err = op.qe.Query(queryStr)
+	}
 	duration = time.Since(st)
+
 	if err != nil {
 		return duration, err
 	}
@@ -234,6 +295,32 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 	}
 
 	return duration, nil
+}
+
+// JobFrontPage ...
+type JobFrontPage struct {
+	ops      *Operations
+	queryStr string
+	result   *jobFrontPageResult
+	done     chan bool
+}
+
+// Do ...
+func (j *JobFrontPage) Do() {
+	j.do()
+	j.done <- true
+}
+
+func (j *JobFrontPage) do() {
+	resp, err := j.ops.qe.Query(j.queryStr)
+
+	j.result.resp = resp
+	j.result.err = err
+}
+
+type jobFrontPageResult struct {
+	resp interface{}
+	err  error
 }
 
 // Story ...
