@@ -81,7 +81,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
 		commentStorySampler: distributions.NewSampler(conf.Distributions.CommentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
-		dispatcher:          workerpool.NewDispatcher(8, 10000),
+		dispatcher:          workerpool.NewDispatcher(int(conf.WorkerPoolSize), int(conf.JobQueueSize)),
 	}
 
 	ops.dispatcher.Run()

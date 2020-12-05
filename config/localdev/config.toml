@@ -1,8 +1,10 @@
 tracing = false
+workerPoolSize = 10
+jobQueueSize = 1000
 
 [Connection]
 proteusEndpoint = "127.0.0.1:50350"
-DBEndpoint = "127.0.0.1:3307"
+DBEndpoint = "127.0.0.1:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
@@ -14,8 +16,8 @@ runtime = 20
 doWarmup = false
 warmup = 10
 threadCount = 1
-measuredSystem = "proteus"
-# measuredSystem = "mysql"
+# measuredSystem = "proteus"
+measuredSystem = "baseline_workers"
 workloadType = "simple"
 targetLoad = 10
 maxInFlightRead = 1

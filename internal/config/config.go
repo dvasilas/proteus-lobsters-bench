@@ -22,8 +22,10 @@ const (
 
 // BenchmarkConfig ...
 type BenchmarkConfig struct {
-	Tracing bool
-	Preload struct {
+	Tracing        bool
+	WorkerPoolSize int64
+	JobQueueSize   int64
+	Preload        struct {
 		RecordCount struct {
 			Users    int64
 			Stories  int64
