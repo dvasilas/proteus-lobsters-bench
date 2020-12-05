@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-	"fmt"
-	"sync/atomic"
+	//"fmt"
+	//"sync/atomic"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
 	"github.com/dvasilas/proteus-lobsters-bench/internal/measurements"
@@ -59,7 +59,12 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 
 	limitReadCh := make(chan struct{}, g.config.Benchmark.MaxInFlightRead)
 	limitWriteCh := make(chan struct{}, g.config.Benchmark.MaxInFlightWrite)
-	var inFlightR, maxInFlightR int64
+//	var inFlightR, maxInFlightR int64
+	limitThreads := true
+	if g.config.Benchmark.MaxInFlightWrite == 1 && g.config.Benchmark.MaxInFlightRead == 1 {
+		limitThreads = false
+	}
+
 
 	histograms := make(map[string]*stats.Histogram)
 	histograms["read"] = measurements.NewHistogram()
@@ -73,7 +78,7 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 	}()
 
 	warmupShortCirc := true
-	//nextOp := true
+	nextOp := true
 	next = time.Now()
 
 	for time.Now().UnixNano() < end.UnixNano() {
@@ -92,34 +97,39 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 		}
 
 
-		op = g.workload.NextOp()
-	//	if nextOp {
-	//		nextOp = false
-	//		op = g.workload.NextOp()
-	//	}
-
-		switch op.(type) {
-			case operations.Frontpage, operations.Story:
-				val := atomic.AddInt64(&inFlightR, 1)
-				if val > maxInFlightR {
-					maxInFlightR = val
-				}
-//		select {
-	//		case limitReadCh <- struct{}{}:
-	//			nextOp = true
-	//		default:
-	//			continue
-	//		}
-	//	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
-	//		select {
-	//		case limitWriteCh <- struct{}{}:
-	//			nextOp = true
-	//		default:
-	//			continue
-	//		}
+		if limitThreads {
+			if nextOp {
+				nextOp = false
+				op = g.workload.NextOp()
+			}
+		} else {
+			op = g.workload.NextOp()
 		}
 
-		go doOperationAsync(op, measurementsCh, limitReadCh, limitWriteCh, &inFlightR)
+		if limitThreads {
+		switch op.(type) {
+			case operations.Frontpage, operations.Story:
+	//			val := atomic.AddInt64(&inFlightR, 1)
+	//			if val > maxInFlightR {
+	//				maxInFlightR = val
+	//			}
+				select {
+				case limitReadCh <- struct{}{}:
+					nextOp = true
+				default:
+					continue
+				}
+			case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
+			select {
+			case limitWriteCh <- struct{}{}:
+				nextOp = true
+			default:
+				continue
+			}
+		}
+		}
+
+		go doOperationAsync(op, measurementsCh, limitReadCh, limitWriteCh, limitThreads, nil)
 
 		opCnt++
 
@@ -130,7 +140,7 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 
 	wg.Wait()
 
-	fmt.Println("max in flight: ", maxInFlightR)
+//	fmt.Println("max in flight: ", maxInFlightR)
 
 	return measurements.ClientMeasurements{
 		Runtime:        runtime,
@@ -140,15 +150,17 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 	}
 }
 
-func doOperationAsync(op operations.Operation, measurementsCh chan measurements.Measurement, limitReadCh, limitWriteCh chan struct{}, inFlightR *int64) {
+func doOperationAsync(op operations.Operation, measurementsCh chan measurements.Measurement, limitReadCh, limitWriteCh chan struct{}, limitThreads bool, inFlightR *int64) {
 	opType, respTime, endTs := op.DoOperation()
 
+	if limitThreads {
 	switch op.(type) {
 	case operations.Frontpage, operations.Story:
-//		<-limitReadCh
-		atomic.AddInt64(inFlightR, -1)
-//	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
-//		<-limitWriteCh
+		<-limitReadCh
+	//	atomic.AddInt64(inFlightR, -1)
+	case operations.StoryVote, operations.CommentVote, operations.Submit, operations.Comment:
+		<-limitWriteCh
+	}
 	}
 
 	measurementsCh <- measurements.Measurement{
