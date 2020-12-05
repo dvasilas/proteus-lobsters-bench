@@ -45,15 +45,14 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	var ds datastore.Datastore
 	var qe queryengine.QueryEngine
 	var err error
+	ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
+	if err != nil {
+		return nil, err
+	}
 
 	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
-			ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
-			if err != nil {
-				return nil, err
-			}
-
 			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
@@ -63,6 +62,8 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 			if err != nil {
 				return nil, err
 			}
+		case "baseline":
+			qe = queryengine.NewBaselineQE(&ds)
 		default:
 			return nil, errors.New("invalid 'system' argument")
 		}
@@ -137,8 +138,10 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 	st := time.Now()
 	if op.config.Benchmark.MeasuredSystem == "proteus" {
 		err = op.ds.StoryVoteSimple(1, storyID, vote)
-	} else {
+	} else if op.config.Benchmark.MeasuredSystem == "proteus" {
 		err = op.qe.StoryVote(storyID, vote)
+	} else if op.config.Benchmark.MeasuredSystem == "baseline" {
+		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
 	}
 	return time.Since(st), err
 }
@@ -202,8 +205,6 @@ func (op *Operations) getTopStories() ([]int64, error) {
 			}
 			topStories[i] = sID
 		}
-	case "mysql_plain":
-	case "mysql_mv":
 	}
 
 	return topStories, nil
@@ -230,8 +231,6 @@ func (op *Operations) Frontpage() (time.Duration, error) {
 		// 	fmt.Println(entry.GetAttributes()["title"], entry.GetAttributes()["short_id"], entry.GetAttributes()["vote_sum"])
 		// }
 		// fmt.Println()
-	case "mysql_plain":
-	case "mysql_mv":
 	}
 
 	return duration, nil

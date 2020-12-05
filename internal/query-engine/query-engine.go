@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dvasilas/proteus-lobsters-bench/internal/datastore"
 	proteusclient "github.com/dvasilas/proteus/pkg/proteus-go-client"
 )
 
@@ -139,4 +140,77 @@ func (qe MysqlQE) StoryVote(storyID int64, vote int) error {
 // Close ...
 func (qe MysqlQE) Close() {
 	qe.proteusClient.Close()
+}
+
+// ------------------ Baseline query engine ---------------
+
+// BaselineQE ...
+type BaselineQE struct {
+	ds *datastore.Datastore
+}
+
+// NewBaselineQE ...
+func NewBaselineQE(ds *datastore.Datastore) BaselineQE {
+	return BaselineQE{
+		ds: ds,
+	}
+}
+
+// Query ...
+func (qe BaselineQE) Query(query string) (interface{}, error) {
+	rows, err := qe.ds.Db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns, _ := rows.Columns()
+	count := len(columns)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	result := make([]map[string]interface{}, 0)
+
+	for rows.Next() {
+
+		for i := range columns {
+			valuePtrs[i] = &values[i]
+		}
+
+		rows.Scan(valuePtrs...)
+
+		row := make(map[string]interface{})
+		for i, col := range values {
+			if col != nil {
+				row[columns[i]] = col
+			}
+		}
+
+		for i, col := range columns {
+			val := values[i]
+
+			b, ok := val.([]byte)
+			var v interface{}
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			row[col] = v
+		}
+
+		result = append(result, row)
+	}
+
+	return result, nil
+}
+
+// StoryVote ...
+func (qe BaselineQE) StoryVote(storyID int64, vote int) error {
+	return nil
+}
+
+// Close ...
+func (qe BaselineQE) Close() {
+	qe.ds.Db.Close()
 }
