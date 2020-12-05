@@ -1,6 +1,7 @@
 tracing = false
 workerPoolSize = 10
 jobQueueSize = 1000
+serverCount = 10
 
 [Connection]
 proteusEndpoint = "join:50350"
