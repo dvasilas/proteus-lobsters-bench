@@ -25,7 +25,6 @@ type BenchmarkConfig struct {
 	Tracing        bool
 	WorkerPoolSize int
 	JobQueueSize   int
-	ServerCount    int
 	Preload        struct {
 		RecordCount struct {
 			Users    int64
@@ -55,13 +54,13 @@ type BenchmarkConfig struct {
 		MaxInFlightWrite int64
 	}
 	Connection struct {
-		ProteusEndpoint string
-		DBEndpoint      string
-		Database        string
-		AccessKeyID     string
-		SecretAccessKey string
-		PoolSize        int
-		PoolOverflow    int
+		ProteusEndpoints []string
+		DBEndpoint       string
+		Database         string
+		AccessKeyID      string
+		SecretAccessKey  string
+		PoolSize         int
+		PoolOverflow     int
 	}
 	GetMetrics struct {
 		QPU []struct {

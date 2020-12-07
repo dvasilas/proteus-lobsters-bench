@@ -4,7 +4,7 @@ jobQueueSize = 1000
 serverCount = 10
 
 [Connection]
-proteusEndpoint = "join:50350"
+ProteusEndpoints = [ "join:50350" , "join1:50350" ]
 DBEndpoint = "datastore:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"

@@ -55,12 +55,12 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
-			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.ServerCount, conf.Tracing)
+			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
 		case "mysql":
-			qe, err = queryengine.NewMysqlQE(conf.Connection.ProteusEndpoint, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			qe, err = queryengine.NewMysqlQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}

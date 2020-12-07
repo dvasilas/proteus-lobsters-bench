@@ -33,16 +33,16 @@ type MysqlQE struct {
 // --------------------- Proteus query engine --------------------
 
 // NewProteusQE ...
-func NewProteusQE(endpoint string, poolSize, poolOverflow, serverCount int, tracing bool) (ProteusQE, error) {
-	clients := make([]*proteusclient.Client, serverCount)
+func NewProteusQE(endpoints []string, poolSize, poolOverflow int, tracing bool) (ProteusQE, error) {
+	clients := make([]*proteusclient.Client, len(endpoints))
 
-	for i := 0; i < serverCount; i++ {
+	for i, endpoint := range endpoints {
 		port, err := strconv.ParseInt(strings.Split(endpoint, ":")[1], 10, 64)
 		if err != nil {
 			return ProteusQE{}, err
 		}
 
-		endpoint := fmt.Sprintf("%s:%s", strings.Split(endpoint, ":")[0], strconv.FormatInt(port+int64(i), 10))
+		// endpoint := fmt.Sprintf("%s:%s", strings.Split(endpoint, ":")[0], strconv.FormatInt(port+int64(i), 10))
 		for {
 			c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
 			if err != nil {
@@ -54,7 +54,7 @@ func NewProteusQE(endpoint string, poolSize, poolOverflow, serverCount int, trac
 			}
 		}
 
-		c, err := proteusclient.NewClient(proteusclient.Host{Name: strings.Split(endpoint, ":")[0], Port: int(port) + i}, poolSize, poolOverflow, tracing)
+		c, err := proteusclient.NewClient(proteusclient.Host{Name: strings.Split(endpoint, ":")[0], Port: int(port)}, poolSize, poolOverflow, tracing)
 		if err != nil {
 			return ProteusQE{}, err
 		}
@@ -74,7 +74,7 @@ func NewProteusQE(endpoint string, poolSize, poolOverflow, serverCount int, trac
 
 	return ProteusQE{
 		proteusClient: clients,
-		serverCount:   serverCount,
+		serverCount:   len(endpoints),
 	}, nil
 }
 
@@ -102,9 +102,10 @@ func (qe ProteusQE) Close() {
 // ------------------ MySQL query engine ---------------
 
 // NewMysqlQE ...
-func NewMysqlQE(endpoint string, poolSize, poolOverflow int, tracing bool) (MysqlQE, error) {
+func NewMysqlQE(endpoints []string, poolSize, poolOverflow int, tracing bool) (MysqlQE, error) {
+	endpoint := endpoints[0]
 	for {
-		c, err := net.DialTimeout("tcp", endpoint, time.Duration(time.Second))
+		c, err := net.DialTimeout("tcp", endpoints[0], time.Duration(time.Second))
 		if err != nil {
 			time.Sleep(2 * time.Second)
 			fmt.Println("retrying connecting to: ", endpoint)
