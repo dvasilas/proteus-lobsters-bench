@@ -3,7 +3,8 @@ workerPoolSize = 10
 jobQueueSize = 1000
 
 [Connection]
-ProteusEndpoints = [ "join:50350" ] 
+ProteusEndpoints = [ "join:50350" ]
+LobstersEndpoints = [ "lobsters:50350" ]
 DBEndpoint = "datastore:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"

@@ -15,7 +15,7 @@ import (
 // QueryEngine ...
 type QueryEngine interface {
 	Query(query string, opID int64) (interface{}, error)
-	StoryVote(storyID int64, vote int) error
+	StoryVote(storyID int64, vote int, opID int64) error
 	Close()
 }
 
@@ -59,15 +59,15 @@ func NewProteusQE(endpoints []string, poolSize, poolOverflow int, tracing bool) 
 			return ProteusQE{}, err
 		}
 
-		err = errors.New("not tried yet")
-		for err != nil {
-			_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
-			if err != nil {
-				return ProteusQE{}, err
-			}
-			time.Sleep(2 * time.Second)
-			fmt.Println("retrying a test query", err)
-		}
+		// err = errors.New("not tried yet")
+		// for err != nil {
+		// 	_, err = c.Query("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT 2")
+		// 	if err != nil && !strings.Contains(err.Error(), "marshaling") {
+		// 		return ProteusQE{}, err
+		// 	}
+		// 	time.Sleep(2 * time.Second)
+		// 	fmt.Println("retrying a test query", err)
+		// }
 
 		clients[i] = c
 	}
@@ -80,16 +80,13 @@ func NewProteusQE(endpoints []string, poolSize, poolOverflow int, tracing bool) 
 
 // Query ...
 func (qe ProteusQE) Query(query string, opID int64) (resp interface{}, err error) {
-	resp, err = qe.proteusClient[int(opID%int64(qe.serverCount))].Query(query)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return qe.proteusClient[int(opID%int64(qe.serverCount))].Query(query)
 }
 
 // StoryVote ...
-func (qe ProteusQE) StoryVote(storyID int64, vote int) error {
-	return nil
+func (qe ProteusQE) StoryVote(storyID int64, vote int, opID int64) error {
+	_, err := qe.proteusClient[int(opID%int64(qe.serverCount))].LobstersStoryVoteInsert(storyID, vote)
+	return err
 }
 
 // Close ...
@@ -141,12 +138,15 @@ func NewMysqlQE(endpoints []string, poolSize, poolOverflow int, tracing bool) (M
 
 // Query ...
 func (qe MysqlQE) Query(query string, opID int64) (interface{}, error) {
-	return qe.proteusClient.LobstersFrontpage()
+	resp, err := qe.proteusClient.LobstersFrontpage()
+	fmt.Println("LobstersFrontpage", resp, err)
+	return resp, err
 }
 
 // StoryVote ...
-func (qe MysqlQE) StoryVote(storyID int64, vote int) error {
+func (qe MysqlQE) StoryVote(storyID int64, vote int, opID int64) error {
 	_, err := qe.proteusClient.LobstersStoryVote(storyID, vote)
+	fmt.Println("StoryVote", err)
 	return err
 }
 
@@ -219,7 +219,7 @@ func (qe BaselineQE) Query(query string, opID int64) (interface{}, error) {
 }
 
 // StoryVote ...
-func (qe BaselineQE) StoryVote(storyID int64, vote int) error {
+func (qe BaselineQE) StoryVote(storyID int64, vote int, opID int64) error {
 	return nil
 }
 

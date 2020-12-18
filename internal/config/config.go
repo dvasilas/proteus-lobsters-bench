@@ -54,13 +54,14 @@ type BenchmarkConfig struct {
 		MaxInFlightWrite int64
 	}
 	Connection struct {
-		ProteusEndpoints []string
-		DBEndpoint       string
-		Database         string
-		AccessKeyID      string
-		SecretAccessKey  string
-		PoolSize         int
-		PoolOverflow     int
+		ProteusEndpoints  []string
+		LobstersEndpoints []string
+		DBEndpoint        string
+		Database          string
+		AccessKeyID       string
+		SecretAccessKey   string
+		PoolSize          int
+		PoolOverflow      int
 	}
 	GetMetrics struct {
 		QPU []struct {

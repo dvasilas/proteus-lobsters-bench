@@ -216,7 +216,7 @@ func (w Workload) Preload() error {
 		go func(count int64) {
 			defer wg.Done()
 			for i := int64(0); i < count; i++ {
-				if _, err := w.ops.StoryVote(1); err != nil {
+				if _, err := w.ops.StoryVote(1, 0); err != nil {
 					panic(err)
 				}
 			}
@@ -244,7 +244,7 @@ func (w Workload) Test() error {
 	}
 
 	fmt.Println("UpVote story ...")
-	if _, err := w.ops.StoryVote(1); err != nil {
+	if _, err := w.ops.StoryVote(1, 0); err != nil {
 		return err
 	}
 	time.Sleep(2 * time.Second)

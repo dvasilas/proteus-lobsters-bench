@@ -25,7 +25,8 @@ import (
 // Operations ...
 type Operations struct {
 	config              *config.BenchmarkConfig
-	qe                  queryengine.QueryEngine
+	qeProteus           queryengine.QueryEngine
+	qeLobsters          queryengine.QueryEngine
 	ds                  datastore.Datastore
 	storyVoteSampler    distributions.Sampler
 	commentVoteSampler  distributions.Sampler
@@ -45,29 +46,36 @@ type Operation interface {
 func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	var ds datastore.Datastore
-	var qe queryengine.QueryEngine
+	var qeProteus, qeLobsters queryengine.QueryEngine
 	var err error
-	ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
-	if err != nil {
-		return nil, err
+
+	if conf.Benchmark.MeasuredSystem == "baseline" || conf.Benchmark.MeasuredSystem == "baseline_workers " {
+		ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if !conf.Benchmark.DoPreload && conf.Operations.WriteRatio < 1.0 {
 		switch conf.Benchmark.MeasuredSystem {
 		case "proteus":
-			qe, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			qeProteus, err = queryengine.NewProteusQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			if err != nil {
+				return nil, err
+			}
+			qeLobsters, err = queryengine.NewProteusQE(conf.Connection.LobstersEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
 		case "mysql":
-			qe, err = queryengine.NewMysqlQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
+			qeLobsters, err = queryengine.NewMysqlQE(conf.Connection.ProteusEndpoints, conf.Connection.PoolSize, conf.Connection.PoolOverflow, conf.Tracing)
 			if err != nil {
 				return nil, err
 			}
 		case "baseline":
-			qe = queryengine.NewBaselineQE(&ds)
+			qeLobsters = queryengine.NewBaselineQE(&ds)
 		case "baseline_workers":
-			qe = queryengine.NewBaselineQE(&ds)
+			qeLobsters = queryengine.NewBaselineQE(&ds)
 		default:
 			return nil, errors.New("invalid 'system' argument")
 		}
@@ -75,7 +83,8 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 
 	ops := &Operations{
 		config:              conf,
-		qe:                  qe,
+		qeProteus:           qeProteus,
+		qeLobsters:          qeLobsters,
 		ds:                  ds,
 		storyVoteSampler:    distributions.NewSampler(conf.Distributions.VotesPerStory),
 		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
@@ -116,7 +125,7 @@ type StoryVote struct {
 
 // DoOperation ...
 func (op StoryVote) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
-	respTime, err := op.Ops.StoryVote(op.Vote)
+	respTime, err := op.Ops.StoryVote(op.Vote, opID)
 	if err != nil {
 		if strings.Contains(err.Error(), "Deadlock") {
 			return measurements.Deadlock, respTime, time.Now()
@@ -129,7 +138,7 @@ func (op StoryVote) DoOperation(opID int64) (measurements.OpType, time.Duration,
 }
 
 // StoryVote issues an up or down vote for the given story.
-func (op *Operations) StoryVote(vote int) (time.Duration, error) {
+func (op *Operations) StoryVote(vote int, opID int64) (time.Duration, error) {
 	var storyID int64
 	var err error
 	for storyID == 0 {
@@ -144,9 +153,10 @@ func (op *Operations) StoryVote(vote int) (time.Duration, error) {
 	}
 	st := time.Now()
 	if op.config.Benchmark.MeasuredSystem == "proteus" {
-		err = op.ds.StoryVoteSimple(1, storyID, vote)
-	} else if op.config.Benchmark.MeasuredSystem == "proteus" {
-		err = op.qe.StoryVote(storyID, vote)
+		// err = op.ds.StoryVoteSimple(1, storyID, vote)
+		err = op.qeLobsters.StoryVote(storyID, vote, opID)
+	} else if op.config.Benchmark.MeasuredSystem == "mysql" {
+		err = op.qeLobsters.StoryVote(storyID, vote, opID)
 	} else if op.config.Benchmark.MeasuredSystem == "baseline" {
 		err = op.ds.StoryVoteUpdateCount(1, storyID, vote)
 	} else if op.config.Benchmark.MeasuredSystem == "baseline_workers" {
@@ -219,10 +229,8 @@ type Frontpage struct {
 func (op Frontpage) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Frontpage(opID)
 	if err != nil {
-		if strings.Contains(err.Error(), "out of sync") || strings.Contains(err.Error(), "bad connection") || err == mysql.ErrInvalidConn {
-			// er(err)
-			return measurements.Deadlock, respTime, time.Now()
-		}
+		// er(err)
+		return measurements.Deadlock, respTime, time.Now()
 	}
 	return measurements.Read, respTime, time.Now()
 }
@@ -233,7 +241,7 @@ func (op *Operations) getTopStories() ([]int64, error) {
 	queryStr := fmt.Sprintf("SELECT title, description, short_id, user_id, vote_sum FROM stories ORDER BY vote_sum DESC LIMIT %d",
 		op.config.Operations.Homepage.StoriesLimit)
 
-	resp, err := op.qe.Query(queryStr, 0)
+	resp, err := op.qeProteus.Query(queryStr, 0)
 	if err != nil {
 		return topStories, err
 	}
@@ -276,8 +284,10 @@ func (op *Operations) Frontpage(opID int64) (time.Duration, error) {
 		<-work.done
 
 		err = work.result.err
+	} else if op.config.Benchmark.MeasuredSystem == "proteus" {
+		_, err = op.qeProteus.Query(queryStr, opID)
 	} else {
-		_, err = op.qe.Query(queryStr, opID)
+		_, err = op.qeLobsters.Query(queryStr, opID)
 	}
 	duration = time.Since(st)
 
@@ -314,7 +324,7 @@ func (j *JobFrontPage) Do() {
 }
 
 func (j *JobFrontPage) do() {
-	resp, err := j.ops.qe.Query(j.queryStr, j.opID)
+	resp, err := j.ops.qeLobsters.Query(j.queryStr, j.opID)
 
 	j.result.resp = resp
 	j.result.err = err
@@ -351,7 +361,7 @@ func (op *Operations) Story() (time.Duration, error) {
 
 	var duration time.Duration
 	st := time.Now()
-	_, err := op.qe.Query(queryStr, 0)
+	_, err := op.qeProteus.Query(queryStr, 0)
 	duration = time.Since(st)
 	if err != nil {
 		return duration, err
@@ -454,8 +464,11 @@ func (op *Operations) logout() {}
 
 // Close ...
 func (op *Operations) Close() {
-	if op.qe != nil {
-		op.qe.Close()
+	if op.qeProteus != nil {
+		op.qeProteus.Close()
+	}
+	if op.qeLobsters != nil {
+		op.qeLobsters.Close()
 	}
 }
 
