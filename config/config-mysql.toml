@@ -1,10 +1,9 @@
 tracing = false
 workerPoolSize = 10
 jobQueueSize = 1000
-serverCount = 10
 
 [Connection]
-ProteusEndpoints = [ "join:50350" , "join1:50350" ]
+ProteusEndpoints = [ "join:50350" ]
 DBEndpoint = "datastore:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
@@ -13,9 +12,9 @@ poolSize = 256
 poolOverflow = 256
 
 [Benchmark]
-runtime = 150
+runtime = 60 
 doWarmup = true
-warmup = 30
+warmup = 20
 threadCount = 1
 measuredsystem = "mysql"
 workloadType = "simple"
@@ -29,7 +28,7 @@ downVoteRatio = 0.1
 distributionType = "histogram"
 
 [Operations.Homepage]
-storiesLimit = 20
+storiesLimit = 25
 
 [Preload.RecordCount]
 users = 9200

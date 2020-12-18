@@ -3,7 +3,7 @@ workerPoolSize = 10
 jobQueueSize = 1000
 
 [Connection]
-ProteusEndpoints = [ "join:50350" , "join1:50350" ]
+ProteusEndpoints = [ "join:50350" ] 
 DBEndpoint = "datastore:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
@@ -28,7 +28,7 @@ downVoteRatio = 0.1
 distributionType = "histogram"
 
 [Operations.Homepage]
-storiesLimit = 5
+storiesLimit = 25
 
 [Preload.RecordCount]
 users = 9200
