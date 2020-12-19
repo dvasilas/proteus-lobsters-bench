@@ -1,5 +1,7 @@
 tracing = false
-workerPoolSize = 10
+workerPoolSizeQ = 8
+jobQueueSizeQ = 10000
+workerPoolSizeF = 2
 jobQueueSize = 1000
 
 [Connection]

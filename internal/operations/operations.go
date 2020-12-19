@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+
 	//"runtime/debug"
 	"strconv"
 	"strings"
@@ -34,7 +35,8 @@ type Operations struct {
 	StoryID             int64
 	topStories          []int64
 	voteDistribution    config.DistributionType
-	dispatcher          *workerpool.Dispatcher
+	dispatcherQ         *workerpool.Dispatcher
+	dispatcherW         *workerpool.Dispatcher
 }
 
 // Operation ...
@@ -90,10 +92,12 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 		commentVoteSampler:  distributions.NewSampler(conf.Distributions.VotesPerComment),
 		commentStorySampler: distributions.NewSampler(conf.Distributions.CommentsPerStory),
 		StoryID:             conf.Preload.RecordCount.Stories,
-		dispatcher:          workerpool.NewDispatcher(int(conf.WorkerPoolSize), int(conf.JobQueueSize)),
+		dispatcherQ:         workerpool.NewDispatcher(int(conf.WorkerPoolSizeQ), int(conf.JobQueueSizeQ)),
+		dispatcherW:         workerpool.NewDispatcher(int(conf.WorkerPoolSizeW), int(conf.JobQueueSizeW)),
 	}
 
-	ops.dispatcher.Run()
+	ops.dispatcherQ.Run()
+	ops.dispatcherW.Run()
 
 	switch conf.Operations.DistributionType {
 	case "uniform":
@@ -168,7 +172,7 @@ func (op *Operations) StoryVote(vote int, opID int64) (time.Duration, error) {
 			done:    make(chan bool),
 		}
 
-		op.dispatcher.JobQueue <- work
+		op.dispatcherW.JobQueue <- work
 
 		<-work.done
 
@@ -279,7 +283,7 @@ func (op *Operations) Frontpage(opID int64) (time.Duration, error) {
 			done:     make(chan bool),
 		}
 
-		op.dispatcher.JobQueue <- work
+		op.dispatcherQ.JobQueue <- work
 
 		<-work.done
 
@@ -542,6 +546,6 @@ func idToShortID(id int64) string {
 
 func er(err error) {
 	fmt.Println(err)
-//	debug.PrintStack()
-//	log.Fatal(err)
+	//	debug.PrintStack()
+	//	log.Fatal(err)
 }
