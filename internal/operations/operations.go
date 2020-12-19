@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"runtime/debug"
+	//"runtime/debug"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -229,7 +229,7 @@ type Frontpage struct {
 func (op Frontpage) DoOperation(opID int64) (measurements.OpType, time.Duration, time.Time) {
 	respTime, err := op.Ops.Frontpage(opID)
 	if err != nil {
-		// er(err)
+		er(err)
 		return measurements.Deadlock, respTime, time.Now()
 	}
 	return measurements.Read, respTime, time.Now()
@@ -542,6 +542,6 @@ func idToShortID(id int64) string {
 
 func er(err error) {
 	fmt.Println(err)
-	debug.PrintStack()
-	log.Fatal(err)
+//	debug.PrintStack()
+//	log.Fatal(err)
 }

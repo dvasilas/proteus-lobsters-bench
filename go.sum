@@ -26,6 +26,12 @@ github.com/dvasilas/proteus v0.0.0-20201218182048-177eadb23897 h1:hWpBtPf7NI0tJ5
 github.com/dvasilas/proteus v0.0.0-20201218182048-177eadb23897/go.mod h1:KP6G2KUTJtQRJtMU2u2qvW3gJScY3ma3pPUGjy8u268=
 github.com/dvasilas/proteus v0.0.0-20201218232222-b2993e6d8a62 h1:Ben6YoXQAipdPStrXcHEJDsVbssdvqS+OxNQD1RQEwA=
 github.com/dvasilas/proteus v0.0.0-20201218232222-b2993e6d8a62/go.mod h1:KP6G2KUTJtQRJtMU2u2qvW3gJScY3ma3pPUGjy8u268=
+github.com/dvasilas/proteus v0.0.0-20201219103813-49b3dbcd98d6 h1:uohPrUFP+9VpGdZHTk7BvdVzfqLYduYU4PyMR4Xnb/0=
+github.com/dvasilas/proteus v0.0.0-20201219103813-49b3dbcd98d6/go.mod h1:KP6G2KUTJtQRJtMU2u2qvW3gJScY3ma3pPUGjy8u268=
+github.com/dvasilas/proteus v0.0.0-20201219104101-faa42895b6ba h1:5+xoz/jcjx8DmtdQdmur20o+1TgyL2Q1HNAGNgAK1bQ=
+github.com/dvasilas/proteus v0.0.0-20201219104101-faa42895b6ba/go.mod h1:KP6G2KUTJtQRJtMU2u2qvW3gJScY3ma3pPUGjy8u268=
+github.com/dvasilas/proteus v0.0.0-20201219104341-fb086e43c9eb h1:GZmMfHYaeVPX4HdIWm3XQtSaRDX2szfYjUAh2fmVRrg=
+github.com/dvasilas/proteus v0.0.0-20201219104341-fb086e43c9eb/go.mod h1:KP6G2KUTJtQRJtMU2u2qvW3gJScY3ma3pPUGjy8u268=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=

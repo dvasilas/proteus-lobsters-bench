@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	//"fmt"
+	"fmt"
 	//"sync/atomic"
 
 	"github.com/dvasilas/proteus-lobsters-bench/internal/config"
@@ -83,6 +83,7 @@ func (g *Generator) Client() measurements.ClientMeasurements {
 
 	for time.Now().UnixNano() < end.UnixNano() {
 		if warmupShortCirc && time.Now().UnixNano() > warmpupEnd.UnixNano() {
+			fmt.Println("//////// warmupDone")
 			warmupShortCirc = false
 			st = time.Now()
 			opCnt = 0
