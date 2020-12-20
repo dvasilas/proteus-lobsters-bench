@@ -51,7 +51,7 @@ func NewOperations(conf *config.BenchmarkConfig) (*Operations, error) {
 	var qeProteus, qeLobsters queryengine.QueryEngine
 	var err error
 
-	if conf.Benchmark.MeasuredSystem == "baseline" || conf.Benchmark.MeasuredSystem == "baseline_workers " {
+	if conf.Benchmark.MeasuredSystem == "baseline" || conf.Benchmark.MeasuredSystem == "baseline_workers" {
 		ds, err = datastore.NewDatastore(conf.Connection.DBEndpoint, conf.Connection.Database, conf.Connection.AccessKeyID, conf.Connection.SecretAccessKey)
 		if err != nil {
 			return nil, err

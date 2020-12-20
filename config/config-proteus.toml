@@ -1,8 +1,8 @@
 tracing = false
 workerPoolSizeQ = 8
 jobQueueSizeQ = 10000
-workerPoolSizeF = 2
-jobQueueSize = 1000
+workerPoolSizeW = 2
+jobQueueSizeW = 1000
 
 [Connection]
 ProteusEndpoints = [ "join:50350" ]
@@ -28,7 +28,7 @@ maxInFlightWrite = 4
 [Operations]
 writeRatio = 0.05
 downVoteRatio = 0.1
-distributionType = "histogram"
+distributionType = "voteTopStories"
 
 [Operations.Homepage]
 storiesLimit = 25

@@ -1,8 +1,8 @@
 tracing = false
 workerPoolSizeQ = 8
 jobQueueSizeQ = 10000
-workerPoolSizeF = 2
-jobQueueSize = 1000
+workerPoolSizeW = 2
+jobQueueSizeW = 10000
 
 [Connection]
 ProteusEndpoints = [ "join:50350" ]
@@ -18,7 +18,7 @@ runtime = 60
 doWarmup = true
 warmup = 20
 threadCount = 1
-measuredsystem = "mysql"
+measuredsystem = "baseline_workers"
 workloadType = "simple"
 targetLoad = 30
 maxInFlightRead = 4
