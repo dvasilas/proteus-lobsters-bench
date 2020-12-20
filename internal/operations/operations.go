@@ -148,7 +148,14 @@ func (op *Operations) StoryVote(vote int, opID int64) (time.Duration, error) {
 	for storyID == 0 {
 		switch op.voteDistribution {
 		case config.VoteTopStories:
-			storyID = op.topStories[rand.Intn(len(op.topStories))]
+			r := rand.Float64()
+			if r < op.config.Operations.VoteTopStoriesP {
+				fmt.Println("top")
+				storyID = op.topStories[rand.Intn(len(op.topStories))]
+			} else {
+				fmt.Println("histo")
+				storyID = op.storyVoteSampler.Sample()
+			}
 		case config.Histogram:
 			storyID = op.storyVoteSampler.Sample()
 		case config.Uniform:

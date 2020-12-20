@@ -28,6 +28,7 @@ maxInFlightWrite = 4
 writeRatio = 0.05
 downVoteRatio = 0.1
 distributionType = "histogram"
+voteTopStoriesP = 1.0
 
 [Operations.Homepage]
 storiesLimit = 25

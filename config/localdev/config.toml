@@ -1,13 +1,13 @@
 tracing = false
 workerPoolSizeQ = 8
 jobQueueSizeQ = 10000
-workerPoolSizeF = 2
+workerPoolSizeW = 2
 jobQueueSize = 1000
 
 [Connection]
 ProteusEndpoints = [ "127.0.0.1:50350" ]
 LobstersEndpoints = [ "127.0.0.1:50351" ]
-DBEndpoint = "127.0.0.1:3307"
+DBEndpoint = "127.0.0.1:3306"
 database = "proteus_lobsters_db"
 accessKeyID = "root"
 secretAccessKey  = "verySecretPwd"
@@ -29,7 +29,8 @@ maxInFlightWrite = 1
 [Operations]
 writeRatio = 0.5
 downVoteRatio = 0.2
-distributionType = "uniform"
+distributionType = "voteTopStories"
+voteTopStoriesP = 0.0
 
 [Operations.Homepage]
 storiesLimit = 5

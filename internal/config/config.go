@@ -42,6 +42,7 @@ type BenchmarkConfig struct {
 		WriteRatio       float64
 		DownVoteRatio    float64
 		DistributionType string
+		VoteTopStoriesP  float64
 	}
 	Benchmark struct {
 		DoPreload        bool
